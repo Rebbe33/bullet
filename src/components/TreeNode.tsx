@@ -105,6 +105,7 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
             <span className="node-title">{item.title}</span>
             {item.notes && <span className="node-notes">{item.notes}</span>}
           </div>
+          <div className="node-actions">
           {kids.length > 0 && (
             <span className="prog">
               {prog.done}/{prog.total}
@@ -124,6 +125,7 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
           <button className="icon" title="Plus d'actions" onClick={() => setTools((t) => !t)}>
             ⋯
           </button>
+          </div>
         </div>
       )}
 
