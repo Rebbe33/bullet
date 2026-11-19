@@ -1,0 +1,458 @@
+:root {
+  --bg: #faf8f4;
+  --card: #ffffff;
+  --ink: #2b2a28;
+  --muted: #8a867e;
+  --line: #e8e3da;
+  --accent: #c2562f;
+  --accent-soft: #f6e3da;
+  --ok: #4f8a5b;
+  --warn: #b4491f;
+  --warn-soft: #fbe9e1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1a18;
+    --card: #252320;
+    --ink: #ece8e1;
+    --muted: #9a958b;
+    --line: #35322d;
+    --accent: #e07b53;
+    --accent-soft: #3a2b24;
+    --ok: #7fbf8b;
+    --warn: #e8875f;
+    --warn-soft: #3a2720;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+h1 {
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+h3 small {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+button.danger {
+  color: var(--warn);
+}
+
+input[type='text'],
+input:not([type]),
+input[type='date'],
+input[type='month'],
+textarea {
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  width: 100%;
+}
+
+input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  flex: none;
+  margin: 2px 0 0;
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.cap::first-letter {
+  text-transform: uppercase;
+}
+
+/* ---------- Layout ---------- */
+
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
+.top-in {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.brand {
+  color: var(--accent);
+}
+
+.top nav {
+  display: flex;
+  gap: 4px;
+}
+
+.top nav a {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 4px 12px;
+  border-radius: 8px;
+}
+
+.top nav a.active {
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+
+.error {
+  background: var(--warn-soft);
+  color: var(--warn);
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------- Cartes ---------- */
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.card.is-today {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+.card.warn {
+  border-color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.card summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.linklike {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font-weight: 600;
+  text-align: left;
+}
+
+.agenda-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.agenda-head h1 {
+  flex: 1;
+  min-width: 180px;
+}
+
+.nav-btns,
+.seg {
+  display: flex;
+  gap: 4px;
+}
+
+.seg button.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+/* ---------- Tâches (agenda) ---------- */
+
+.tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.task {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.task-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.task-title {
+  overflow-wrap: anywhere;
+}
+
+.task-path {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.is-done .task-title,
+.is-done .node-title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.quick input {
+  border-style: dashed;
+}
+
+/* ---------- Arbre d'objectifs ---------- */
+
+.tree {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tree > .node {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 10px 8px;
+}
+
+.children {
+  margin: 6px 0 0 11px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.node-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.node-row.root .node-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.node-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.node-title {
+  overflow-wrap: anywhere;
+}
+
+.node-notes {
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.chev {
+  border: none;
+  background: none;
+  padding: 0 2px;
+  width: 20px;
+  color: var(--muted);
+}
+
+.icon {
+  padding: 0 8px;
+  line-height: 1.6;
+}
+
+.prog {
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding-top: 3px;
+  white-space: nowrap;
+}
+
+.bar {
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  margin: 4px 0 0 26px;
+  overflow: hidden;
+}
+
+.bar span {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+}
+
+.node-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 4px 26px;
+}
+
+.node-tools button {
+  font-size: 0.8rem;
+  padding: 3px 8px;
+}
+
+.edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* ---------- Menu de planification ---------- */
+
+.sched {
+  position: relative;
+  display: inline-block;
+  flex: none;
+}
+
+.chip {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border-color: transparent;
+  white-space: nowrap;
+}
+
+.chip-empty {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 50;
+  width: 210px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.menu button {
+  text-align: left;
+  border: none;
+  background: none;
+}
+
+.menu button:hover {
+  background: var(--accent-soft);
+}
+
+.menu label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding: 2px 6px;
+}
