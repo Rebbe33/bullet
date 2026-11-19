@@ -456,3 +456,76 @@ ul {
   color: var(--muted);
   padding: 2px 6px;
 }
+
+/* ---------- Import ---------- */
+
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.import {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.import-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.import-head h3 {
+  margin: 0;
+}
+
+.small {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+select {
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  width: 100%;
+}
+
+textarea.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  white-space: pre;
+}
+
+.preview {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  max-height: 260px;
+  overflow: auto;
+  font-size: 0.9rem;
+}
+
+.preview ul {
+  margin-top: 4px;
+}
+
+.ok {
+  color: var(--ok);
+  align-self: center;
+}
