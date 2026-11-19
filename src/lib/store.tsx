@@ -12,6 +12,7 @@ import {
 import { getSupabase } from './supabase';
 import type { Item, Sched } from './types';
 import { buildIndex, descendantIds, isDone, type Index } from './tree';
+import type { ParsedRow } from './importer';
 
 const TABLE = 'bullet_items';
 
@@ -21,6 +22,7 @@ interface Store {
   loading: boolean;
   error: string | null;
   addItem: (parentId: string | null, title: string, sched?: Sched | null) => Promise<void>;
+  importRows: (parentId: string | null, rows: ParsedRow[]) => Promise<number>;
   updateItem: (id: string, patch: Partial<Item>) => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
@@ -96,6 +98,43 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [index, fail]
   );
 
+  // Import en un seul envoi : les ids sont générés ici pour pouvoir
+  // relier parents et enfants dans la même requête.
+  const importRows: Store['importRows'] = useCallback(
+    async (parentId, rows) => {
+      if (rows.length === 0) return 0;
+      const ids = rows.map(() => crypto.randomUUID());
+      const sibs = index.kids.get(parentId) ?? [];
+      const basePos = sibs.length ? sibs[sibs.length - 1].position : 0;
+      const counters = new Map<string | null, number>();
+      const now = new Date().toISOString();
+
+      const payload = rows.map((r, i) => {
+        const pid = r.parentIdx === null ? parentId : ids[r.parentIdx];
+        const start = counters.has(pid) ? counters.get(pid)! : pid === parentId ? basePos : 0;
+        const position = start + 1;
+        counters.set(pid, position);
+        return {
+          id: ids[i],
+          parent_id: pid,
+          title: r.title,
+          done: r.done,
+          done_at: r.done ? now : null,
+          position,
+        };
+      });
+
+      const { data, error } = await getSupabase().from(TABLE).insert(payload).select();
+      if (error) {
+        await fail(error);
+        return 0;
+      }
+      setItems((prev) => [...prev, ...((data ?? []) as Item[])]);
+      return payload.length;
+    },
+    [index, fail]
+  );
+
   const updateItem: Store['updateItem'] = useCallback(
     async (id, patch) => {
       patchLocal([id], patch);
@@ -147,6 +186,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     addItem,
+    importRows,
     updateItem,
     toggleDone,
     deleteItem,
