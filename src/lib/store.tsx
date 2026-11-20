@@ -1,183 +1,235 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import BilanForm from '@/components/BilanForm';
-import Conditions from '@/components/Conditions';
-import PlantPhoto from '@/components/PlantPhoto';
-import { HEALTH, careInfo, dueLabel, effectiveFreq, fmtDate, lateBy, nextDue } from '@/lib/care';
-import { deletePlant, errMsg, loadPlant, loadSpots, markDone, setArchived } from '@/lib/api';
-import { plantKind, soilLabel, symptomLabel } from '@/lib/diagnostic';
-import type { Log, Plant, Spot, Task } from '@/lib/types';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import { getSupabase } from './supabase';
+import type { Item, Sched } from './types';
+import { buildIndex, descendantIds, isDone, type Index } from './tree';
+import type { ParsedRow } from './importer';
 
-export default function PlantPage() {
-  const { id } = useParams<{ id: string }>();
-  const router = useRouter();
-  const [plant, setPlant] = useState<Plant | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [logs, setLogs] = useState<Log[]>([]);
-  const [spots, setSpots] = useState<Spot[]>([]);
-  const [spotsError, setSpotsError] = useState(false);
+const TABLE = 'bullet_items';
+
+interface Store {
+  items: Item[];
+  index: Index;
+  loading: boolean;
+  error: string | null;
+  addItem: (parentId: string | null, title: string, sched?: Sched | null) => Promise<void>;
+  importRows: (parentId: string | null, rows: ParsedRow[]) => Promise<number>;
+  updateItem: (id: string, patch: Partial<Item>) => Promise<void>;
+  toggleDone: (id: string) => Promise<void>;
+  restoreDone: (snapshot: { id: string; done: boolean }[]) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>;
+  schedule: (id: string, sched: Sched | null) => Promise<void>;
+  move: (id: string, parentId: string | null, position: number) => Promise<void>;
+}
+
+const Ctx = createContext<Store | null>(null);
+
+const msg = (e: unknown) =>
+  e && typeof e === 'object' && 'message' in e
+    ? String((e as { message: unknown }).message)
+    : String(e);
+
+export function StoreProvider({ children }: { children: ReactNode }) {
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const index = useMemo(() => buildIndex(items), [items]);
 
-  const load = useCallback(async () => {
+  const reload = useCallback(async () => {
     try {
-      const d = await loadPlant(id);
-      setPlant(d.plant);
-      setTasks(d.tasks);
-      setLogs(d.logs);
-      setError(null);
-      try {
-        setSpots(await loadSpots());
-        setSpotsError(false);
-      } catch {
-        // table pas encore créée : on affiche l'invitation à lancer le script SQL
-        setSpots([]);
-        setSpotsError(true);
+      // Supabase renvoie au maximum ~1000 lignes par requête : on charge par pages
+      // (tri stable created_at + id) jusqu'à ce qu'il n'y ait plus rien.
+      const sb = getSupabase();
+      const all: Item[] = [];
+      for (let from = 0; ; ) {
+        const { data, error } = await sb
+          .from(TABLE)
+          .select('*')
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + 999);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...(data as Item[]));
+        from += data.length;
       }
+      setItems(all);
+      setError(null);
     } catch (e) {
-      setError(errMsg(e));
+      setError(msg(e));
+    } finally {
+      setLoading(false);
     }
-  }, [id]);
+  }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    void reload();
+  }, [reload]);
 
-  // type de plante déduit de l'espèce (null = non reconnu)
-  const kind = useMemo(() => (plant ? plantKind(plant.species, plant.name) : null), [plant]);
-
-  async function run(fn: () => Promise<void>) {
-    setBusy(true);
-    try {
-      await fn();
-      await load();
-    } catch (e) {
-      setError(errMsg(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove() {
-    if (!plant) return;
-    if (!confirm(`Supprimer « ${plant.name} » et tout son historique ? C'est définitif.`)) return;
-    setBusy(true);
-    try {
-      await deletePlant(plant);
-      router.push('/plantes');
-    } catch (e) {
-      setError(errMsg(e));
-      setBusy(false);
-    }
-  }
-
-  if (error && !plant) return <div className="error">{error}</div>;
-  if (!plant) return <p className="muted">Chargement…</p>;
-
-  const activeTasks = tasks
-    .filter((t) => t.active)
-    .sort((a, b) => (lateBy(b) ?? -999) - (lateBy(a) ?? -999));
-  const lastBilan = logs.find((l) => l.care_type === 'bilan' && l.health);
-
-  return (
-    <>
-      <p className="small">
-        <Link href="/plantes" className="muted">← Mes plantes</Link>
-      </p>
-      {error && <div className="error">{error}</div>}
-
-      <PlantPhoto path={plant.photo_path} alt={plant.name} large />
-
-      <div className="page-head" style={{ marginTop: 12 }}>
-        <div>
-          <h1>{plant.name}</h1>
-          <p className="sub">
-            {[plant.species, plant.room, plant.exposure].filter(Boolean).join(' · ') || 'Aucune info'}
-            {plant.archived && ' · archivée'}
-          </p>
-        </div>
-        <Link href={`/plantes/${plant.id}/modifier`} className="btn sm">Modifier</Link>
-      </div>
-
-      {plant.notes && <div className="card small">{plant.notes}</div>}
-
-      <h2>Soins</h2>
-      <div className="card flush">
-        {activeTasks.length === 0 && <div className="row muted">Aucun soin programmé.</div>}
-        {activeTasks.map((t) => {
-          const c = careInfo(t.care_type);
-          const late = lateBy(t);
-          const freq = effectiveFreq(t);
-          return (
-            <div className="row" key={t.id}>
-              <div style={{ fontSize: '1.4rem' }}>{c.emoji}</div>
-              <div className="grow">
-                <div className="name">{c.label}</div>
-                <div className="small muted">
-                  {freq ? `tous les ${freq} j` : 'en pause (hiver)'} · dernier : {fmtDate(t.last_done)}
-                  {nextDue(t) && late !== null && late < 0 ? ` · prochain : ${fmtDate(nextDue(t))}` : ''}
-                </div>
-              </div>
-              {late === null ? (
-                <span className="badge off">pause</span>
-              ) : (
-                <span className={`badge ${late > 0 ? 'late' : late === 0 ? '' : 'soon'}`}>{dueLabel(late)}</span>
-              )}
-              {t.care_type !== 'bilan' && (
-                <button className="btn primary sm" disabled={busy} onClick={() => run(() => markDone([t]))}>
-                  Fait ✓
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      <Conditions plant={plant} tasks={tasks} spots={spots} spotsError={spotsError} kind={kind} onChanged={load} />
-
-      <h2>Bilan santé</h2>
-      {lastBilan && (
-        <p className="small muted" style={{ marginTop: 0 }}>
-          Dernier bilan ({fmtDate(lastBilan.done_on)}) : {HEALTH.find((h) => h.value === lastBilan.health)?.emoji}{' '}
-          {HEALTH.find((h) => h.value === lastBilan.health)?.label}
-        </p>
-      )}
-      <BilanForm plant={plant} tasks={tasks} spots={spots} onChanged={load} />
-
-      <h2>Historique</h2>
-      <div className="card flush">
-        {logs.length === 0 && <div className="row muted">Rien pour l&apos;instant.</div>}
-        {logs.map((l) => {
-          const c = careInfo(l.care_type);
-          const h = HEALTH.find((x) => x.value === l.health);
-          return (
-            <div className="log-line" key={l.id}>
-              <span className="d">{fmtDate(l.done_on)}</span>
-              <span>
-                {c.emoji} {c.label}
-                {h ? ` — ${h.emoji} ${h.label}` : ''}
-                {l.soil && <span className="muted"> · terre {soilLabel(l.soil)}</span>}
-                {l.symptoms && l.symptoms.length > 0 && (
-                  <span className="muted"> · {l.symptoms.map(symptomLabel).join(', ')}</span>
-                )}
-                {l.note && <span className="muted"> · {l.note}</span>}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="btn-row" style={{ marginTop: 20 }}>
-        <button className="btn" disabled={busy} onClick={() => run(() => setArchived(plant.id, !plant.archived))}>
-          {plant.archived ? 'Désarchiver' : 'Archiver'}
-        </button>
-        <button className="btn danger" disabled={busy} onClick={remove}>
-          Supprimer
-        </button>
-      </div>
-    </>
+  // En cas d'échec d'une écriture : on affiche l'erreur et on resynchronise.
+  const fail = useCallback(
+    async (e: unknown) => {
+      setError(msg(e));
+      await reload();
+    },
+    [reload]
   );
+
+  const patchLocal = useCallback((ids: string[], patch: Partial<Item>) => {
+    const set = new Set(ids);
+    setItems((prev) => prev.map((i) => (set.has(i.id) ? { ...i, ...patch } : i)));
+  }, []);
+
+  const addItem: Store['addItem'] = useCallback(
+    async (parentId, title, sched) => {
+      const sibs = index.kids.get(parentId) ?? [];
+      const position = sibs.length ? sibs[sibs.length - 1].position + 1 : 1;
+      const { data, error } = await getSupabase()
+        .from(TABLE)
+        .insert({
+          parent_id: parentId,
+          title,
+          position,
+          sched_type: sched?.type ?? null,
+          sched_date: sched?.date ?? null,
+        })
+        .select()
+        .single();
+      if (error) return fail(error);
+      setItems((prev) => [...prev, data as Item]);
+    },
+    [index, fail]
+  );
+
+  // Import en un seul envoi : les ids sont générés ici pour pouvoir
+  // relier parents et enfants dans la même requête.
+  const importRows: Store['importRows'] = useCallback(
+    async (parentId, rows) => {
+      if (rows.length === 0) return 0;
+      const ids = rows.map(() => crypto.randomUUID());
+      const sibs = index.kids.get(parentId) ?? [];
+      const basePos = sibs.length ? sibs[sibs.length - 1].position : 0;
+      const counters = new Map<string | null, number>();
+      const now = new Date().toISOString();
+
+      const payload = rows.map((r, i) => {
+        const pid = r.parentIdx === null ? parentId : ids[r.parentIdx];
+        const start = counters.has(pid) ? counters.get(pid)! : pid === parentId ? basePos : 0;
+        const position = start + 1;
+        counters.set(pid, position);
+        return {
+          id: ids[i],
+          parent_id: pid,
+          title: r.title,
+          done: r.done,
+          done_at: r.done ? now : null,
+          position,
+        };
+      });
+
+      const { data, error } = await getSupabase().from(TABLE).insert(payload).select();
+      if (error) {
+        await fail(error);
+        return 0;
+      }
+      setItems((prev) => [...prev, ...((data ?? []) as Item[])]);
+      return payload.length;
+    },
+    [index, fail]
+  );
+
+  const updateItem: Store['updateItem'] = useCallback(
+    async (id, patch) => {
+      patchLocal([id], patch);
+      const { error } = await getSupabase().from(TABLE).update(patch).eq('id', id);
+      if (error) await fail(error);
+    },
+    [patchLocal, fail]
+  );
+
+  const toggleDone: Store['toggleDone'] = useCallback(
+    async (id) => {
+      const it = index.byId.get(id);
+      if (!it) return;
+      const value = !isDone(index, it);
+      const ids = [id, ...descendantIds(index, id)];
+      const patch = { done: value, done_at: value ? new Date().toISOString() : null };
+      patchLocal(ids, patch);
+      const { error } = await getSupabase().from(TABLE).update(patch).in('id', ids);
+      if (error) await fail(error);
+    },
+    [index, patchLocal, fail]
+  );
+
+  // Remet chaque élément dans l'état "fait / pas fait" qu'il avait (sert à l'annulation)
+  const restoreDone: Store['restoreDone'] = useCallback(
+    async (snapshot) => {
+      for (const value of [true, false]) {
+        const ids = snapshot.filter((s) => s.done === value).map((s) => s.id);
+        if (ids.length === 0) continue;
+        const patch = { done: value, done_at: value ? new Date().toISOString() : null };
+        patchLocal(ids, patch);
+        const { error } = await getSupabase().from(TABLE).update(patch).in('id', ids);
+        if (error) {
+          await fail(error);
+          return;
+        }
+      }
+    },
+    [patchLocal, fail]
+  );
+
+  const deleteItem: Store['deleteItem'] = useCallback(
+    async (id) => {
+      const gone = new Set([id, ...descendantIds(index, id)]);
+      setItems((prev) => prev.filter((i) => !gone.has(i.id)));
+      // les sous-éléments partent en cascade côté base
+      const { error } = await getSupabase().from(TABLE).delete().eq('id', id);
+      if (error) await fail(error);
+    },
+    [index, fail]
+  );
+
+  const schedule: Store['schedule'] = useCallback(
+    (id, sched) =>
+      updateItem(id, { sched_type: sched?.type ?? null, sched_date: sched?.date ?? null }),
+    [updateItem]
+  );
+
+  const move: Store['move'] = useCallback(
+    (id, parentId, position) => updateItem(id, { parent_id: parentId, position }),
+    [updateItem]
+  );
+
+  const value: Store = {
+    items,
+    index,
+    loading,
+    error,
+    addItem,
+    importRows,
+    updateItem,
+    toggleDone,
+    restoreDone,
+    deleteItem,
+    schedule,
+    move,
+  };
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export function useStore(): Store {
+  const s = useContext(Ctx);
+  if (!s) throw new Error('useStore doit être utilisé dans <StoreProvider>');
+  return s;
 }
