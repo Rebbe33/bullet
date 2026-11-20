@@ -4,22 +4,31 @@ import { useState } from 'react';
 import type { Item } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { isDone, progress } from '@/lib/tree';
+import { useTreeUI } from '@/lib/treeui';
 import { ScheduleMenu } from './ScheduleMenu';
 import { QuickAdd } from './QuickAdd';
 
 export function TreeNode({ item, depth }: { item: Item; depth: number }) {
   const { index, addItem, updateItem, toggleDone, deleteItem, move } = useStore();
-  const kids = index.kids.get(item.id) ?? [];
-  const [open, setOpen] = useState(true);
+  const ui = useTreeUI();
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
   const [tools, setTools] = useState(false);
   const [title, setTitle] = useState(item.title);
   const [notes, setNotes] = useState(item.notes ?? '');
 
+  const allKids = index.kids.get(item.id) ?? [];
+  // les éléments entièrement terminés sont masqués (sauf si on choisit de les afficher)
+  const kids = ui.showDone ? allKids : allKids.filter((k) => !isDone(index, k));
+  const open = ui.isOpen(item.id);
+
   const prog = progress(index, item.id);
   const done = isDone(index, item);
-  const sibs = index.kids.get(item.parent_id) ?? [];
+
+  // frères visibles (pour que ↑ ↓ → ← agissent sur ce qu'on voit à l'écran)
+  const sibs = (index.kids.get(item.parent_id) ?? []).filter(
+    (s) => ui.showDone || s.id === item.id || !isDone(index, s)
+  );
   const i = sibs.findIndex((x) => x.id === item.id);
 
   const moveUp = () => {
@@ -41,6 +50,7 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
     if (i <= 0) return;
     const prev = sibs[i - 1];
     const pk = index.kids.get(prev.id) ?? [];
+    ui.open(prev.id);
     void move(item.id, prev.id, pk.length ? pk[pk.length - 1].position + 1 : 1);
   };
 
@@ -56,9 +66,10 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
   };
 
   const remove = () => {
-    const n = kids.length;
     const ok = window.confirm(
-      n ? `Supprimer « ${item.title} » et ses éléments en dessous ?` : `Supprimer « ${item.title} » ?`
+      allKids.length
+        ? `Supprimer « ${item.title} » et ses éléments en dessous ?`
+        : `Supprimer « ${item.title} » ?`
     );
     if (ok) void deleteItem(item.id);
   };
@@ -95,7 +106,7 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
           <button
             className="chev"
             disabled={kids.length === 0}
-            onClick={() => setOpen((o) => !o)}
+            onClick={() => ui.toggle(item.id)}
             aria-label={open ? 'Replier' : 'Déplier'}
           >
             {kids.length ? (open ? '▾' : '▸') : '•'}
@@ -106,30 +117,30 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
             {item.notes && <span className="node-notes">{item.notes}</span>}
           </div>
           <div className="node-actions">
-          {kids.length > 0 && (
-            <span className="prog">
-              {prog.done}/{prog.total}
-            </span>
-          )}
-          <ScheduleMenu item={item} />
-          <button
-            className="icon"
-            title="Ajouter une sous-tâche"
-            onClick={() => {
-              setAdding(true);
-              setOpen(true);
-            }}
-          >
-            ＋
-          </button>
-          <button className="icon" title="Plus d'actions" onClick={() => setTools((t) => !t)}>
-            ⋯
-          </button>
+            {allKids.length > 0 && (
+              <span className="prog">
+                {prog.done}/{prog.total}
+              </span>
+            )}
+            <ScheduleMenu item={item} />
+            <button
+              className="icon"
+              title="Ajouter une sous-tâche"
+              onClick={() => {
+                setAdding(true);
+                ui.open(item.id);
+              }}
+            >
+              ＋
+            </button>
+            <button className="icon" title="Plus d'actions" onClick={() => setTools((t) => !t)}>
+              ⋯
+            </button>
           </div>
         </div>
       )}
 
-      {kids.length > 0 && !editing && (
+      {allKids.length > 0 && !editing && (
         <div className="bar" aria-hidden>
           <span style={{ width: `${prog.pct}%` }} />
         </div>
