@@ -2,16 +2,22 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
+import { isDone } from '@/lib/tree';
+import { TreeUIProvider, useTreeUI } from '@/lib/treeui';
 import { QuickAdd } from '@/components/QuickAdd';
 import { TreeNode } from '@/components/TreeNode';
 import { ImportPanel } from '@/components/ImportPanel';
 
-export default function ObjectifsPage() {
-  const { index, loading, addItem } = useStore();
+function ObjectifsInner() {
+  const { items, index, loading, addItem } = useStore();
+  const ui = useTreeUI();
   const [importing, setImporting] = useState(false);
   if (loading) return <p className="muted">Chargement…</p>;
 
-  const roots = index.kids.get(null) ?? [];
+  const allRoots = index.kids.get(null) ?? [];
+  const roots = allRoots.filter((r) => ui.showDone || !isDone(index, r));
+  const parentIds = items.filter((i) => (index.kids.get(i.id)?.length ?? 0) > 0).map((i) => i.id);
+  const doneLeaves = items.filter((i) => i.done && !(index.kids.get(i.id)?.length)).length;
 
   return (
     <>
@@ -26,12 +32,29 @@ export default function ObjectifsPage() {
         placeholder="Nouvel objectif (Entrée pour ajouter)"
         onAdd={(t) => addItem(null, t)}
       />
-      {roots.length === 0 && (
+
+      <div className="toolbar">
+        <button onClick={ui.collapseAll}>Tout replier</button>
+        <button onClick={() => ui.expandAll(parentIds)}>Tout déplier</button>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={ui.showDone}
+            onChange={(e) => ui.setShowDone(e.target.checked)}
+          />
+          Afficher les terminées ({doneLeaves})
+        </label>
+      </div>
+
+      {allRoots.length === 0 && (
         <p className="muted">
           Rien pour l'instant. Ajoute un objectif, puis décompose-le avec le bouton ＋ en tâches et
           sous-tâches, sur autant de niveaux que tu veux. Le 📅 permet de les placer sur un jour,
           une semaine ou un mois.
         </p>
+      )}
+      {allRoots.length > 0 && roots.length === 0 && (
+        <p className="muted">Tout est terminé 🎉 (coche « Afficher les terminées » pour les revoir).</p>
       )}
       <ul className="tree">
         {roots.map((r) => (
@@ -39,5 +62,13 @@ export default function ObjectifsPage() {
         ))}
       </ul>
     </>
+  );
+}
+
+export default function ObjectifsPage() {
+  return (
+    <TreeUIProvider>
+      <ObjectifsInner />
+    </TreeUIProvider>
   );
 }
