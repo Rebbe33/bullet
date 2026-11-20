@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { Item } from '@/lib/types';
 import { useStore } from '@/lib/store';
-import { isDone, progress } from '@/lib/tree';
+import { descendantIds, isDone, progress } from '@/lib/tree';
 import { useTreeUI } from '@/lib/treeui';
 import { ScheduleMenu } from './ScheduleMenu';
 import { QuickAdd } from './QuickAdd';
@@ -30,6 +30,18 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
     (s) => ui.showDone || s.id === item.id || !isDone(index, s)
   );
   const i = sibs.findIndex((x) => x.id === item.id);
+
+  // Cocher : si l'élément va disparaître de la vue, on propose « Annuler »
+  const onToggle = () => {
+    if (!ui.showDone && !done) {
+      const ids = [item.id, ...descendantIds(index, item.id)];
+      ui.notifyDone(
+        item.title,
+        ids.map((id) => ({ id, done: index.byId.get(id)?.done ?? false }))
+      );
+    }
+    void toggleDone(item.id);
+  };
 
   const moveUp = () => {
     if (i <= 0) return;
@@ -111,7 +123,7 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
           >
             {kids.length ? (open ? '▾' : '▸') : '•'}
           </button>
-          <input type="checkbox" checked={done} onChange={() => void toggleDone(item.id)} />
+          <input type="checkbox" checked={done} onChange={onToggle} />
           <div className="node-main">
             <span className="node-title">{item.title}</span>
             {item.notes && <span className="node-notes">{item.notes}</span>}
