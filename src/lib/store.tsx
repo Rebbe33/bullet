@@ -45,12 +45,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const reload = useCallback(async () => {
     try {
-      const { data, error } = await getSupabase()
-        .from(TABLE)
-        .select('*')
-        .order('position', { ascending: true });
-      if (error) throw error;
-      setItems((data ?? []) as Item[]);
+      // Supabase renvoie au maximum ~1000 lignes par requête : on charge par pages
+      // (tri stable created_at + id) jusqu'à ce qu'il n'y ait plus rien.
+      const sb = getSupabase();
+      const all: Item[] = [];
+      for (let from = 0; ; ) {
+        const { data, error } = await sb
+          .from(TABLE)
+          .select('*')
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + 999);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...(data as Item[]));
+        from += data.length;
+      }
+      setItems(all);
       setError(null);
     } catch (e) {
       setError(msg(e));
