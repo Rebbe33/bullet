@@ -24,12 +24,16 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
 
   const prog = progress(index, item.id);
   const done = isDone(index, item);
+  const priority = item.priority > 0;
 
-  // frères visibles (pour que ↑ ↓ → ← agissent sur ce qu'on voit à l'écran)
-  const sibs = (index.kids.get(item.parent_id) ?? []).filter(
+  // frères visibles, dans l'ordre d'affichage (prioritaires d'abord)
+  const vis = (index.kids.get(item.parent_id) ?? []).filter(
     (s) => ui.showDone || s.id === item.id || !isDone(index, s)
   );
-  const i = sibs.findIndex((x) => x.id === item.id);
+  const iv = vis.findIndex((x) => x.id === item.id);
+  // ↑ ↓ ne déplacent qu'à l'intérieur du même niveau de priorité
+  const same = vis.filter((s) => s.priority === item.priority);
+  const i = same.findIndex((x) => x.id === item.id);
 
   // Cocher : si l'élément va disparaître de la vue, on propose « Annuler »
   const onToggle = () => {
@@ -45,25 +49,31 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
 
   const moveUp = () => {
     if (i <= 0) return;
-    const prev = sibs[i - 1];
-    const before = sibs[i - 2];
+    const prev = same[i - 1];
+    const before = same[i - 2];
     void move(item.id, item.parent_id, before ? (before.position + prev.position) / 2 : prev.position - 1);
   };
 
   const moveDown = () => {
-    if (i < 0 || i >= sibs.length - 1) return;
-    const next = sibs[i + 1];
-    const after = sibs[i + 2];
+    if (i < 0 || i >= same.length - 1) return;
+    const next = same[i + 1];
+    const after = same[i + 2];
     void move(item.id, item.parent_id, after ? (next.position + after.position) / 2 : next.position + 1);
+  };
+
+  // tout en haut de son niveau de priorité
+  const moveTop = () => {
+    if (i <= 0) return;
+    void move(item.id, item.parent_id, same[0].position - 1);
   };
 
   // → devient sous-tâche de l'élément juste au-dessus
   const indent = () => {
-    if (i <= 0) return;
-    const prev = sibs[i - 1];
+    if (iv <= 0) return;
+    const prev = vis[iv - 1];
     const pk = index.kids.get(prev.id) ?? [];
     ui.open(prev.id);
-    void move(item.id, prev.id, pk.length ? pk[pk.length - 1].position + 1 : 1);
+    void move(item.id, prev.id, pk.length ? Math.max(...pk.map((k) => k.position)) + 1 : 1);
   };
 
   // ← remonte d'un niveau, juste après son parent
@@ -87,7 +97,7 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
   };
 
   return (
-    <li className="node">
+    <li className={'node' + (priority ? ' prio' : '')}>
       {editing ? (
         <form
           className="edit"
@@ -114,7 +124,14 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
           </div>
         </form>
       ) : (
-        <div className={'node-row' + (depth === 0 ? ' root' : '') + (done ? ' is-done' : '') + (item.is_appointment ? ' appt' : '')}>
+        <div
+          className={
+            'node-row' +
+            (depth === 0 ? ' root' : '') +
+            (done ? ' is-done' : '') +
+            (item.is_appointment ? ' appt' : '')
+          }
+        >
           <button
             className="chev"
             disabled={kids.length === 0}
@@ -135,6 +152,13 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
               </span>
             )}
             <ScheduleMenu item={item} />
+            <button
+              className={'icon star' + (priority ? ' on' : '')}
+              title={priority ? 'Retirer la priorité' : 'Marquer comme prioritaire'}
+              onClick={() => void updateItem(item.id, { priority: priority ? 0 : 1 })}
+            >
+              {priority ? '★' : '☆'}
+            </button>
             <button
               className="icon"
               title="Ajouter une sous-tâche"
@@ -160,16 +184,19 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
 
       {tools && !editing && (
         <div className="node-tools">
+          <button onClick={moveTop} disabled={i <= 0}>
+            ⤒ Tout en haut
+          </button>
           <button onClick={moveUp} disabled={i <= 0}>
             ↑ Monter
           </button>
-          <button onClick={moveDown} disabled={i < 0 || i >= sibs.length - 1}>
+          <button onClick={moveDown} disabled={i < 0 || i >= same.length - 1}>
             ↓ Descendre
           </button>
           <button onClick={outdent} disabled={!item.parent_id}>
             ← Remonter d'un niveau
           </button>
-          <button onClick={indent} disabled={i <= 0}>
+          <button onClick={indent} disabled={iv <= 0}>
             → Sous l'élément du dessus
           </button>
           <button
