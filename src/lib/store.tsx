@@ -10,15 +10,17 @@ import {
   type ReactNode,
 } from 'react';
 import { getSupabase } from './supabase';
-import type { Item, Sched } from './types';
+import type { Birthday, Item, NewBirthday, Sched } from './types';
 import { buildIndex, descendantIds, isDone, type Index } from './tree';
 import type { ParsedRow } from './importer';
 
 const TABLE = 'bullet_items';
+const BDAYS = 'bullet_birthdays';
 
 interface Store {
   items: Item[];
   index: Index;
+  birthdays: Birthday[];
   loading: boolean;
   error: string | null;
   addItem: (
@@ -34,6 +36,9 @@ interface Store {
   deleteItem: (id: string) => Promise<void>;
   schedule: (id: string, sched: Sched | null) => Promise<void>;
   move: (id: string, parentId: string | null, position: number) => Promise<void>;
+  addBirthdays: (list: NewBirthday[]) => Promise<number>;
+  updateBirthday: (id: string, patch: Partial<NewBirthday>) => Promise<void>;
+  deleteBirthday: (id: string) => Promise<void>;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -45,6 +50,7 @@ const msg = (e: unknown) =>
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([]);
+  const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const index = useMemo(() => buildIndex(items), [items]);
@@ -68,6 +74,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         from += data.length;
       }
       setItems(all);
+
+      const bd = await sb.from(BDAYS).select('*').order('month').order('day');
+      if (bd.error) throw bd.error;
+      setBirthdays((bd.data ?? []) as Birthday[]);
       setError(null);
     } catch (e) {
       setError(msg(e));
@@ -97,7 +107,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const addItem: Store['addItem'] = useCallback(
     async (parentId, title, sched, extra) => {
       const sibs = index.kids.get(parentId) ?? [];
-      const position = sibs.length ? sibs[sibs.length - 1].position + 1 : 1;
+      const position = sibs.length ? Math.max(...sibs.map((s) => s.position)) + 1 : 1;
       const { data, error } = await getSupabase()
         .from(TABLE)
         .insert({
@@ -124,7 +134,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (rows.length === 0) return 0;
       const ids = rows.map(() => crypto.randomUUID());
       const sibs = index.kids.get(parentId) ?? [];
-      const basePos = sibs.length ? sibs[sibs.length - 1].position : 0;
+      const basePos = sibs.length ? Math.max(...sibs.map((s) => s.position)) : 0;
       const counters = new Map<string | null, number>();
       const now = new Date().toISOString();
 
@@ -222,9 +232,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [updateItem]
   );
 
+  // ----- Anniversaires -----
+
+  const addBirthdays: Store['addBirthdays'] = useCallback(
+    async (list) => {
+      if (list.length === 0) return 0;
+      const { data, error } = await getSupabase().from(BDAYS).insert(list).select();
+      if (error) {
+        await fail(error);
+        return 0;
+      }
+      setBirthdays((prev) => [...prev, ...((data ?? []) as Birthday[])]);
+      return list.length;
+    },
+    [fail]
+  );
+
+  const updateBirthday: Store['updateBirthday'] = useCallback(
+    async (id, patch) => {
+      setBirthdays((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+      const { error } = await getSupabase().from(BDAYS).update(patch).eq('id', id);
+      if (error) await fail(error);
+    },
+    [fail]
+  );
+
+  const deleteBirthday: Store['deleteBirthday'] = useCallback(
+    async (id) => {
+      setBirthdays((prev) => prev.filter((b) => b.id !== id));
+      const { error } = await getSupabase().from(BDAYS).delete().eq('id', id);
+      if (error) await fail(error);
+    },
+    [fail]
+  );
+
   const value: Store = {
     items,
     index,
+    birthdays,
     loading,
     error,
     addItem,
@@ -235,6 +280,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     deleteItem,
     schedule,
     move,
+    addBirthdays,
+    updateBirthday,
+    deleteBirthday,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
