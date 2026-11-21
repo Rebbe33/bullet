@@ -114,7 +114,7 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
           </div>
         </form>
       ) : (
-        <div className={'node-row' + (depth === 0 ? ' root' : '') + (done ? ' is-done' : '')}>
+        <div className={'node-row' + (depth === 0 ? ' root' : '') + (done ? ' is-done' : '') + (item.is_appointment ? ' appt' : '')}>
           <button
             className="chev"
             disabled={kids.length === 0}
