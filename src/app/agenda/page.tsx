@@ -6,9 +6,12 @@ import { useStore } from '@/lib/store';
 import { isDone } from '@/lib/tree';
 import {
   addDays,
+  addMonths,
   dayLong,
   dayShort,
   firstOfMonth,
+  isoWeek,
+  lastOfMonth,
   mondayOf,
   monthLabel,
   periodEnd,
@@ -18,7 +21,9 @@ import {
 import { QuickAdd } from '@/components/QuickAdd';
 import { TaskRow } from '@/components/TaskRow';
 
-type Mode = 'jour' | 'semaine';
+type Mode = 'jour' | 'semaine' | 'mois';
+
+const DOW = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
 interface BlockProps {
   title: string;
@@ -63,6 +68,7 @@ export default function AgendaPage() {
   const today = todayISO();
   const weekStart = mondayOf(anchor);
   const monthStart = firstOfMonth(anchor);
+  const monthEnd = lastOfMonth(anchor);
 
   const sortItems = (list: Item[]) =>
     [...list].sort(
@@ -91,28 +97,73 @@ export default function AgendaPage() {
     (i) => !i.sched_type && !i.done && (index.kids.get(i.id)?.length ?? 0) === 0
   );
 
-  const step = mode === 'jour' ? 1 : 7;
   const days = Array.from({ length: 7 }, (_, k) => addDays(weekStart, k));
   const months = Array.from(new Set([firstOfMonth(weekStart), firstOfMonth(addDays(weekStart, 6))]));
 
+  // vue mois : lundis des semaines qui touchent le mois + éléments par jour / semaine
+  const monthWeeks: string[] = [];
+  for (let m = mondayOf(monthStart); m <= mondayOf(monthEnd); m = addDays(m, 7)) monthWeeks.push(m);
+  const byDay = new Map<string, Item[]>();
+  const byWeek = new Map<string, Item[]>();
+  for (const i of items) {
+    if (!i.sched_date) continue;
+    const map = i.sched_type === 'day' ? byDay : i.sched_type === 'week' ? byWeek : null;
+    if (!map) continue;
+    const list = map.get(i.sched_date) ?? [];
+    list.push(i);
+    map.set(i.sched_date, list);
+  }
+
+  const go = (dir: 1 | -1) =>
+    setAnchor(
+      mode === 'mois' ? addMonths(anchor, dir) : addDays(anchor, dir * (mode === 'jour' ? 1 : 7))
+    );
+
   const title =
-    mode === 'jour' ? dayLong(anchor) : `Semaine du ${weekLabel(weekStart)}`;
+    mode === 'jour'
+      ? dayLong(anchor)
+      : mode === 'semaine'
+        ? `Semaine ${isoWeek(weekStart)} · ${weekLabel(weekStart)}`
+        : monthLabel(anchor);
+
+  const openDay = (d: string) => {
+    setAnchor(d);
+    setMode('jour');
+  };
+  const openWeek = (monday: string) => {
+    setAnchor(monday);
+    setMode('semaine');
+  };
 
   return (
     <>
       <div className="agenda-head">
         <div className="nav-btns">
-          <button onClick={() => setAnchor(addDays(anchor, -step))}>←</button>
+          <button onClick={() => go(-1)} aria-label="Précédent">
+            ←
+          </button>
           <button onClick={() => setAnchor(today)}>Aujourd'hui</button>
-          <button onClick={() => setAnchor(addDays(anchor, step))}>→</button>
+          <button onClick={() => go(1)} aria-label="Suivant">
+            →
+          </button>
         </div>
         <h1 className="cap">{title}</h1>
+        <input
+          type="date"
+          className="goto"
+          value={anchor}
+          title="Aller à une date"
+          onChange={(e) => e.target.value && setAnchor(e.target.value)}
+        />
         <div className="seg">
           <button className={mode === 'jour' ? 'on' : ''} onClick={() => setMode('jour')}>
             Jour
           </button>
           <button className={mode === 'semaine' ? 'on' : ''} onClick={() => setMode('semaine')}>
             Semaine
+          </button>
+          <button className={mode === 'mois' ? 'on' : ''} onClick={() => setMode('mois')}>
+            Mois
           </button>
         </div>
       </div>
@@ -138,7 +189,70 @@ export default function AgendaPage() {
         </section>
       )}
 
-      {mode === 'semaine' ? (
+      {mode === 'mois' && (
+        <>
+          <section className="card month">
+            <div className="month-grid month-head">
+              <span>Sem.</span>
+              {DOW.map((n) => (
+                <span key={n}>{n}</span>
+              ))}
+            </div>
+            {monthWeeks.map((ws) => {
+              const weekOpen = (byWeek.get(ws) ?? []).filter((i) => !isDone(index, i)).length;
+              return (
+                <div
+                  key={ws}
+                  className={'month-grid month-row' + (ws === mondayOf(today) ? ' cur' : '')}
+                >
+                  <button
+                    className="wk"
+                    title="Ouvrir cette semaine"
+                    onClick={() => openWeek(ws)}
+                  >
+                    S{isoWeek(ws)}
+                    {weekOpen > 0 && <small>{weekOpen}</small>}
+                  </button>
+                  {Array.from({ length: 7 }, (_, k) => addDays(ws, k)).map((d) => {
+                    const list = byDay.get(d) ?? [];
+                    const open = list.filter((i) => !isDone(index, i));
+                    const inMonth = d >= monthStart && d <= monthEnd;
+                    return (
+                      <button
+                        key={d}
+                        className={
+                          'cell' + (inMonth ? '' : ' out') + (d === today ? ' today' : '')
+                        }
+                        onClick={() => openDay(d)}
+                      >
+                        <span className="num">{Number(d.slice(8))}</span>
+                        {open.length > 0 && <span className="count">{open.length}</span>}
+                        {list.length > 0 && open.length === 0 && (
+                          <span className="count done">✓</span>
+                        )}
+                        <span className="titles">
+                          {open.slice(0, 3).map((i) => (
+                            <span key={i.id}>{i.title}</span>
+                          ))}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </section>
+          <Block
+            title={`Tâches de ${monthLabel(monthStart)}`}
+            hint="à faire quand tu veux dans le mois"
+            items={at('month', monthStart)}
+            placeholder="+ tâche du mois"
+            onAdd={add({ type: 'month', date: monthStart })}
+          />
+        </>
+      )}
+
+      {mode === 'semaine' && (
         <>
           <Block
             title="Cette semaine"
@@ -168,15 +282,14 @@ export default function AgendaPage() {
                 placeholder="+ ajouter"
                 today={d === today}
                 onAdd={add({ type: 'day', date: d })}
-                onTitleClick={() => {
-                  setAnchor(d);
-                  setMode('jour');
-                }}
+                onTitleClick={() => openDay(d)}
               />
             ))}
           </div>
         </>
-      ) : (
+      )}
+
+      {mode === 'jour' && (
         <>
           <Block
             title={anchor === today ? "Aujourd'hui" : 'Ce jour'}
@@ -186,11 +299,12 @@ export default function AgendaPage() {
             onAdd={add({ type: 'day', date: anchor })}
           />
           <Block
-            title="Cette semaine"
+            title={`Semaine ${isoWeek(weekStart)}`}
             hint={weekLabel(weekStart)}
             items={at('week', weekStart)}
             placeholder="+ tâche de la semaine"
             onAdd={add({ type: 'week', date: weekStart })}
+            onTitleClick={() => openWeek(weekStart)}
           />
           <Block
             title={monthLabel(monthStart)}
