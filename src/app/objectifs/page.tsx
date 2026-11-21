@@ -14,7 +14,8 @@ function ObjectifsInner() {
   const [importing, setImporting] = useState(false);
   if (loading) return <p className="muted">Chargement…</p>;
 
-  const allRoots = index.kids.get(null) ?? [];
+  // les rendez-vous créés depuis l'agenda ne sont pas des objectifs : on ne les liste pas ici
+  const allRoots = (index.kids.get(null) ?? []).filter((r) => !r.is_appointment);
   const roots = allRoots.filter((r) => ui.showDone || !isDone(index, r));
   const parentIds = items.filter((i) => (index.kids.get(i.id)?.length ?? 0) > 0).map((i) => i.id);
   const doneLeaves = items.filter((i) => i.done && !(index.kids.get(i.id)?.length)).length;
