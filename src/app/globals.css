@@ -647,3 +647,164 @@ textarea.mono {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---------- Bouton ✓ de validation ---------- */
+
+.quick {
+  display: flex;
+  gap: 6px;
+}
+
+.quick input {
+  flex: 1;
+  min-width: 0;
+}
+
+.quick .validate {
+  flex: none;
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+  font-weight: 700;
+  padding: 4px 14px;
+}
+
+.quick .validate:disabled {
+  opacity: 0.35;
+}
+
+/* ---------- Agenda : date, vue mois, numéros de semaine ---------- */
+
+.goto {
+  width: auto !important;
+  padding: 4px 8px !important;
+}
+
+.month {
+  padding: 8px;
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: 44px repeat(7, 1fr);
+  gap: 4px;
+}
+
+.month-head {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.month-row {
+  margin-bottom: 4px;
+}
+
+.wk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.wk small {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.month-row.cur .wk {
+  border-color: var(--accent);
+}
+
+.cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 4px;
+  text-align: left;
+  overflow: hidden;
+}
+
+.cell.out {
+  opacity: 0.45;
+}
+
+.cell.today {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+.cell .num {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.cell .count {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  padding: 0 6px;
+  line-height: 1.4;
+}
+
+.cell .count.done {
+  background: var(--ok);
+}
+
+.cell .titles {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.cell .titles span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+  .month {
+    padding: 6px;
+  }
+
+  .month-grid {
+    grid-template-columns: 34px repeat(7, 1fr);
+    gap: 3px;
+  }
+
+  .cell {
+    min-height: 48px;
+    padding: 3px;
+  }
+
+  .cell .titles {
+    display: none;
+  }
+
+  .cell .count {
+    position: static;
+    align-self: flex-start;
+  }
+
+  .wk {
+    font-size: 0.7rem;
+  }
+}
