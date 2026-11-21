@@ -19,6 +19,7 @@ import {
   weekLabel,
 } from '@/lib/dates';
 import { QuickAdd } from '@/components/QuickAdd';
+import { AppointmentAdd } from '@/components/AppointmentAdd';
 import { TaskRow } from '@/components/TaskRow';
 
 type Mode = 'jour' | 'semaine' | 'mois';
@@ -31,11 +32,22 @@ interface BlockProps {
   items: Item[];
   placeholder: string;
   onAdd: (title: string) => void | Promise<void>;
+  /** si fourni, affiche le bouton « ＋ RDV » */
+  onAddAppt?: (title: string, time: string | null) => void | Promise<void>;
   today?: boolean;
   onTitleClick?: () => void;
 }
 
-function Block({ title, hint, items, placeholder, onAdd, today, onTitleClick }: BlockProps) {
+function Block({
+  title,
+  hint,
+  items,
+  placeholder,
+  onAdd,
+  onAddAppt,
+  today,
+  onTitleClick,
+}: BlockProps) {
   return (
     <section className={'card' + (today ? ' is-today' : '')}>
       <h3>
@@ -54,6 +66,7 @@ function Block({ title, hint, items, placeholder, onAdd, today, onTitleClick }: 
         ))}
       </ul>
       <QuickAdd placeholder={placeholder} onAdd={onAdd} />
+      {onAddAppt && <AppointmentAdd onAdd={onAddAppt} />}
     </section>
   );
 }
@@ -70,21 +83,33 @@ export default function AgendaPage() {
   const monthStart = firstOfMonth(anchor);
   const monthEnd = lastOfMonth(anchor);
 
+  // à faire d'abord : rendez-vous avec heure (par heure), puis le reste ; les terminés en bas
   const sortItems = (list: Item[]) =>
     [...list].sort(
       (a, b) =>
         Number(isDone(index, a)) - Number(isDone(index, b)) ||
+        (a.start_time && b.start_time
+          ? a.start_time.localeCompare(b.start_time)
+          : a.start_time
+            ? -1
+            : b.start_time
+              ? 1
+              : 0) ||
         a.created_at.localeCompare(b.created_at)
     );
   const at = (type: SchedType, date: string) =>
     sortItems(items.filter((i) => i.sched_type === type && i.sched_date === date));
   const add = (sched: Sched) => (t: string) => addItem(null, t, sched);
+  const addAppt = (date: string) => (t: string, time: string | null) =>
+    addItem(null, t, { type: 'day', date }, { is_appointment: true, start_time: time });
 
+  // en retard : les rendez-vous passés n'en font pas partie
   const overdue = items
     .filter(
       (i) =>
         i.sched_type &&
         i.sched_date &&
+        !i.is_appointment &&
         periodEnd(i.sched_type, i.sched_date) < today &&
         !isDone(index, i)
     )
@@ -215,7 +240,7 @@ export default function AgendaPage() {
                   </button>
                   {Array.from({ length: 7 }, (_, k) => addDays(ws, k)).map((d) => {
                     const list = byDay.get(d) ?? [];
-                    const open = list.filter((i) => !isDone(index, i));
+                    const open = sortItems(list.filter((i) => !isDone(index, i)));
                     const inMonth = d >= monthStart && d <= monthEnd;
                     return (
                       <button
@@ -226,13 +251,24 @@ export default function AgendaPage() {
                         onClick={() => openDay(d)}
                       >
                         <span className="num">{Number(d.slice(8))}</span>
-                        {open.length > 0 && <span className="count">{open.length}</span>}
+                        {open.length > 0 && (
+                          <span
+                            className={
+                              'count' + (open.some((i) => i.is_appointment) ? ' has-appt' : '')
+                            }
+                          >
+                            {open.length}
+                          </span>
+                        )}
                         {list.length > 0 && open.length === 0 && (
                           <span className="count done">✓</span>
                         )}
                         <span className="titles">
                           {open.slice(0, 3).map((i) => (
-                            <span key={i.id}>{i.title}</span>
+                            <span key={i.id} className={i.is_appointment ? 'appt-t' : undefined}>
+                              {i.start_time ? `${i.start_time.slice(0, 5)} ` : ''}
+                              {i.title}
+                            </span>
                           ))}
                         </span>
                       </button>
@@ -282,6 +318,7 @@ export default function AgendaPage() {
                 placeholder="+ ajouter"
                 today={d === today}
                 onAdd={add({ type: 'day', date: d })}
+                onAddAppt={addAppt(d)}
                 onTitleClick={() => openDay(d)}
               />
             ))}
@@ -297,6 +334,7 @@ export default function AgendaPage() {
             placeholder="+ tâche du jour"
             today={anchor === today}
             onAdd={add({ type: 'day', date: anchor })}
+            onAddAppt={addAppt(anchor)}
           />
           <Block
             title={`Semaine ${isoWeek(weekStart)}`}
