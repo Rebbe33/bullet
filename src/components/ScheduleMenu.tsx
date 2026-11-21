@@ -6,7 +6,7 @@ import { useStore } from '@/lib/store';
 import { addDays, firstOfMonth, mondayOf, schedLabel, todayISO } from '@/lib/dates';
 
 export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean }) {
-  const { schedule } = useStore();
+  const { schedule, updateItem } = useStore();
   const [open, setOpen] = useState(false);
   const today = todayISO();
   const nextMonday = addDays(mondayOf(today), 7);
@@ -17,10 +17,12 @@ export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean 
   };
 
   const scheduled = item.sched_type && item.sched_date;
+  const time = item.start_time ? item.start_time.slice(0, 5) : null;
+  const base = scheduled ? schedLabel(item.sched_type!, item.sched_date!) : null;
   const label = compact
     ? '📅'
-    : scheduled
-      ? schedLabel(item.sched_type!, item.sched_date!)
+    : base
+      ? base + (item.sched_type === 'day' && time ? ` · ${time}` : '')
       : '📅 Planifier';
 
   return (
@@ -28,7 +30,7 @@ export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean 
       <button
         className={'chip' + (scheduled && !compact ? '' : ' chip-empty')}
         onClick={() => setOpen((o) => !o)}
-        title={scheduled ? `Planifié : ${schedLabel(item.sched_type!, item.sched_date!)}` : 'Planifier'}
+        title={base ? `Planifié : ${base}` : 'Planifier'}
       >
         {label}
       </button>
@@ -72,6 +74,39 @@ export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean 
                 }
               />
             </label>
+
+            <div className="menu-sep" />
+            <label className="row-check">
+              <input
+                type="checkbox"
+                checked={item.is_appointment}
+                onChange={(e) =>
+                  void updateItem(item.id, {
+                    is_appointment: e.target.checked,
+                    ...(e.target.checked ? {} : { start_time: null }),
+                  })
+                }
+              />
+              Rendez-vous
+            </label>
+            {item.sched_type === 'day' ? (
+              <label>
+                Heure
+                <input
+                  type="time"
+                  value={time ?? ''}
+                  onChange={(e) =>
+                    void updateItem(item.id, {
+                      start_time: e.target.value || null,
+                      ...(e.target.value ? { is_appointment: true } : {}),
+                    })
+                  }
+                />
+              </label>
+            ) : (
+              <span className="menu-hint">Choisis un jour pour ajouter une heure</span>
+            )}
+
             {scheduled && (
               <button className="danger" onClick={() => choose(null)}>
                 Retirer la planification
