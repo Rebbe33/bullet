@@ -9,6 +9,8 @@
   --ok: #4f8a5b;
   --warn: #b4491f;
   --warn-soft: #fbe9e1;
+  --appt: #2f6bb8;
+  --appt-soft: #e4edf9;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +25,8 @@
     --ok: #7fbf8b;
     --warn: #e8875f;
     --warn-soft: #3a2720;
+    --appt: #7fb0f0;
+    --appt-soft: #212c3d;
   }
 }
 
@@ -807,4 +811,119 @@ textarea.mono {
   .wk {
     font-size: 0.7rem;
   }
+}
+
+/* ---------- Rendez-vous ---------- */
+
+.task.appt {
+  background: var(--appt-soft);
+  border-left: 3px solid var(--appt);
+  border-radius: 6px;
+  padding: 3px 4px 3px 6px;
+}
+
+.task.appt .task-title {
+  color: var(--appt);
+}
+
+.task.appt.is-done .task-title {
+  color: var(--muted);
+}
+
+.time {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--appt);
+  color: var(--bg);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.node-row.appt {
+  border-left: 3px solid var(--appt);
+  padding-left: 4px;
+}
+
+.appt-add {
+  margin-top: 6px;
+  width: 100%;
+  font-size: 0.85rem;
+  color: var(--appt);
+  border-style: dashed;
+  border-color: var(--appt);
+  background: transparent;
+}
+
+.appt-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px;
+  border: 1px solid var(--appt);
+  border-radius: 8px;
+  background: var(--appt-soft);
+}
+
+.appt-form .appt-title {
+  flex: 1 1 100%;
+}
+
+.appt-form .appt-time {
+  flex: 1 1 90px;
+  width: auto;
+  min-width: 0;
+}
+
+.appt-form .validate {
+  flex: none;
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+  font-weight: 700;
+  padding: 4px 14px;
+}
+
+.appt-form .validate:disabled {
+  opacity: 0.35;
+}
+
+.cell .titles .appt-t {
+  color: var(--appt);
+  font-weight: 600;
+}
+
+.cell .count.has-appt {
+  background: var(--appt);
+  color: var(--bg);
+}
+
+.menu-sep {
+  height: 1px;
+  background: var(--line);
+  margin: 2px 0;
+}
+
+.menu .row-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.menu .row-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.menu-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  padding: 0 6px 4px;
 }
