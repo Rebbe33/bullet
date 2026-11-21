@@ -16,5 +16,9 @@ export interface Item {
   position: number;
   sched_type: SchedType | null;
   sched_date: string | null;
+  /** rendez-vous : affiché dans une autre couleur, avec une heure optionnelle */
+  is_appointment: boolean;
+  /** "HH:MM:SS" (Postgres) ou "HH:MM" ; seulement pour les éléments planifiés sur un jour */
+  start_time: string | null;
   created_at: string;
 }
