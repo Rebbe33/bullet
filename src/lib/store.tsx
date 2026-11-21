@@ -21,7 +21,12 @@ interface Store {
   index: Index;
   loading: boolean;
   error: string | null;
-  addItem: (parentId: string | null, title: string, sched?: Sched | null) => Promise<void>;
+  addItem: (
+    parentId: string | null,
+    title: string,
+    sched?: Sched | null,
+    extra?: { is_appointment?: boolean; start_time?: string | null }
+  ) => Promise<void>;
   importRows: (parentId: string | null, rows: ParsedRow[]) => Promise<number>;
   updateItem: (id: string, patch: Partial<Item>) => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
@@ -90,7 +95,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addItem: Store['addItem'] = useCallback(
-    async (parentId, title, sched) => {
+    async (parentId, title, sched, extra) => {
       const sibs = index.kids.get(parentId) ?? [];
       const position = sibs.length ? sibs[sibs.length - 1].position + 1 : 1;
       const { data, error } = await getSupabase()
@@ -101,6 +106,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           position,
           sched_type: sched?.type ?? null,
           sched_date: sched?.date ?? null,
+          is_appointment: extra?.is_appointment ?? false,
+          start_time: extra?.start_time ?? null,
         })
         .select()
         .single();
@@ -201,7 +208,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const schedule: Store['schedule'] = useCallback(
     (id, sched) =>
-      updateItem(id, { sched_type: sched?.type ?? null, sched_date: sched?.date ?? null }),
+      updateItem(id, {
+        sched_type: sched?.type ?? null,
+        sched_date: sched?.date ?? null,
+        // une heure n'a de sens que pour un jour précis
+        ...(sched?.type === 'day' ? {} : { start_time: null }),
+      }),
     [updateItem]
   );
 
