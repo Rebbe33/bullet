@@ -35,6 +35,25 @@ export const lastOfMonth = (iso: string) => {
   return toISO(new Date(d.getFullYear(), d.getMonth() + 1, 0));
 };
 
+/** Premier jour du mois, `n` mois plus tard (n peut être négatif) */
+export const addMonths = (iso: string, n: number) => {
+  const d = parseISO(iso);
+  return toISO(new Date(d.getFullYear(), d.getMonth() + n, 1));
+};
+
+/** Numéro de semaine ISO (1–53, semaines du lundi au dimanche) */
+export const isoWeek = (iso: string) => {
+  const d = parseISO(iso);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7)); // jeudi de cette semaine
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return (
+    1 +
+    Math.round(
+      ((d.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
+    )
+  );
+};
+
 /** Dernier jour (inclus) de la période planifiée */
 export const periodEnd = (type: SchedType, date: string) => {
   if (type === 'day') return date;
