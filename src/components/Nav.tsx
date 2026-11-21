@@ -7,7 +7,7 @@ import { useStore } from '@/lib/store';
 export function Nav() {
   const path = usePathname();
   const { error } = useStore();
-  const link = (href: string, label: string) => (
+  const link = (href: string, label: React.ReactNode) => (
     <Link href={href} className={path.startsWith(href) ? 'active' : ''}>
       {label}
     </Link>
@@ -20,6 +20,12 @@ export function Nav() {
         <nav>
           {link('/agenda', 'Agenda')}
           {link('/objectifs', 'Objectifs')}
+          {link(
+            '/anniversaires',
+            <>
+              🎂<span className="nav-long"> Anniversaires</span>
+            </>
+          )}
         </nav>
       </div>
       {error && <div className="error">⚠️ {error}</div>}
