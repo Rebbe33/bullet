@@ -16,7 +16,13 @@ export function buildIndex(items: Item[]): Index {
     kids.set(it.parent_id, list);
   }
   for (const list of kids.values()) {
-    list.sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at));
+    // les prioritaires d'abord, puis l'ordre choisi (position)
+    list.sort(
+      (a, b) =>
+        (b.priority ?? 0) - (a.priority ?? 0) ||
+        a.position - b.position ||
+        a.created_at.localeCompare(b.created_at)
+    );
   }
   return { byId, kids };
 }
