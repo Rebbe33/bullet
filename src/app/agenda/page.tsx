@@ -18,6 +18,7 @@ import {
   todayISO,
   weekLabel,
 } from '@/lib/dates';
+import { ageOn, birthdaysOn } from '@/lib/birthdays';
 import { QuickAdd } from '@/components/QuickAdd';
 import { AppointmentAdd } from '@/components/AppointmentAdd';
 import { TaskRow } from '@/components/TaskRow';
@@ -25,6 +26,12 @@ import { TaskRow } from '@/components/TaskRow';
 type Mode = 'jour' | 'semaine' | 'mois';
 
 const DOW = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+interface Bday {
+  id: string;
+  name: string;
+  age: number | null;
+}
 
 interface BlockProps {
   title: string;
@@ -34,6 +41,8 @@ interface BlockProps {
   onAdd: (title: string) => void | Promise<void>;
   /** si fourni, affiche le bouton « ＋ RDV » */
   onAddAppt?: (title: string, time: string | null) => void | Promise<void>;
+  /** anniversaires du jour (affichés en rose, automatiquement) */
+  bdays?: Bday[];
   today?: boolean;
   onTitleClick?: () => void;
 }
@@ -45,6 +54,7 @@ function Block({
   placeholder,
   onAdd,
   onAddAppt,
+  bdays,
   today,
   onTitleClick,
 }: BlockProps) {
@@ -60,6 +70,16 @@ function Block({
         )}
         {hint && <small>{hint}</small>}
       </h3>
+      {bdays && bdays.length > 0 && (
+        <ul className="bdays">
+          {bdays.map((b) => (
+            <li key={b.id} className="bday">
+              🎂 {b.name}
+              {b.age !== null && b.age > 0 ? ` · ${b.age} ans` : ''}
+            </li>
+          ))}
+        </ul>
+      )}
       <ul className="tasks">
         {items.map((it) => (
           <TaskRow key={it.id} item={it} compact />
@@ -72,8 +92,8 @@ function Block({
 }
 
 export default function AgendaPage() {
-  const { items, index, loading, addItem, schedule } = useStore();
-  const [mode, setMode] = useState<Mode>('semaine');
+  const { items, index, birthdays, loading, addItem, schedule } = useStore();
+  const [mode, setMode] = useState<Mode>('jour');
   const [anchor, setAnchor] = useState(() => todayISO());
 
   if (loading) return <p className="muted">Chargement…</p>;
@@ -102,6 +122,8 @@ export default function AgendaPage() {
   const add = (sched: Sched) => (t: string) => addItem(null, t, sched);
   const addAppt = (date: string) => (t: string, time: string | null) =>
     addItem(null, t, { type: 'day', date }, { is_appointment: true, start_time: time });
+  const bdaysOn = (date: string): Bday[] =>
+    birthdaysOn(birthdays, date).map((b) => ({ id: b.id, name: b.name, age: ageOn(b, date) }));
 
   // en retard : les rendez-vous passés n'en font pas partie
   const overdue = items
@@ -116,11 +138,6 @@ export default function AgendaPage() {
     .sort((a, b) =>
       periodEnd(a.sched_type!, a.sched_date!).localeCompare(periodEnd(b.sched_type!, b.sched_date!))
     );
-
-  // éléments sans enfants, pas faits, pas encore placés
-  const unscheduled = items.filter(
-    (i) => !i.sched_type && !i.done && (index.kids.get(i.id)?.length ?? 0) === 0
-  );
 
   const days = Array.from({ length: 7 }, (_, k) => addDays(weekStart, k));
   const months = Array.from(new Set([firstOfMonth(weekStart), firstOfMonth(addDays(weekStart, 6))]));
@@ -241,6 +258,7 @@ export default function AgendaPage() {
                   {Array.from({ length: 7 }, (_, k) => addDays(ws, k)).map((d) => {
                     const list = byDay.get(d) ?? [];
                     const open = sortItems(list.filter((i) => !isDone(index, i)));
+                    const bds = bdaysOn(d);
                     const inMonth = d >= monthStart && d <= monthEnd;
                     return (
                       <button
@@ -250,7 +268,10 @@ export default function AgendaPage() {
                         }
                         onClick={() => openDay(d)}
                       >
-                        <span className="num">{Number(d.slice(8))}</span>
+                        <span className="num">
+                          {Number(d.slice(8))}
+                          {bds.length > 0 && <span className="cake">🎂</span>}
+                        </span>
                         {open.length > 0 && (
                           <span
                             className={
@@ -264,6 +285,11 @@ export default function AgendaPage() {
                           <span className="count done">✓</span>
                         )}
                         <span className="titles">
+                          {bds.map((b) => (
+                            <span key={b.id} className="bday-t">
+                              🎂 {b.name}
+                            </span>
+                          ))}
                           {open.slice(0, 3).map((i) => (
                             <span key={i.id} className={i.is_appointment ? 'appt-t' : undefined}>
                               {i.start_time ? `${i.start_time.slice(0, 5)} ` : ''}
@@ -315,6 +341,7 @@ export default function AgendaPage() {
                 key={d}
                 title={dayShort(d)}
                 items={at('day', d)}
+                bdays={bdaysOn(d)}
                 placeholder="+ ajouter"
                 today={d === today}
                 onAdd={add({ type: 'day', date: d })}
@@ -331,6 +358,7 @@ export default function AgendaPage() {
           <Block
             title={anchor === today ? "Aujourd'hui" : 'Ce jour'}
             items={at('day', anchor)}
+            bdays={bdaysOn(anchor)}
             placeholder="+ tâche du jour"
             today={anchor === today}
             onAdd={add({ type: 'day', date: anchor })}
@@ -353,19 +381,6 @@ export default function AgendaPage() {
           />
         </>
       )}
-
-      <details className="card" open>
-        <summary>À planifier ({unscheduled.length})</summary>
-        {unscheduled.length === 0 ? (
-          <p className="muted">Tout est placé 🎉</p>
-        ) : (
-          <ul className="tasks">
-            {unscheduled.map((it) => (
-              <TaskRow key={it.id} item={it} />
-            ))}
-          </ul>
-        )}
-      </details>
     </>
   );
 }
