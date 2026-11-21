@@ -14,6 +14,8 @@ export interface Item {
   done: boolean;
   done_at: string | null;
   position: number;
+  /** 0 = normal, 1 = prioritaire (remonte en haut de sa liste) */
+  priority: number;
   sched_type: SchedType | null;
   sched_date: string | null;
   /** rendez-vous : affiché dans une autre couleur, avec une heure optionnelle */
@@ -22,3 +24,14 @@ export interface Item {
   start_time: string | null;
   created_at: string;
 }
+
+export interface Birthday {
+  id: string;
+  name: string;
+  month: number; // 1–12
+  day: number; // 1–31
+  birth_year: number | null;
+  created_at: string;
+}
+
+export type NewBirthday = Pick<Birthday, 'name' | 'month' | 'day' | 'birth_year'>;
