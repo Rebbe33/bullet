@@ -3,6 +3,12 @@
 -- + une planification optionnelle (jour / semaine / mois).
 -- État FINAL (avec connexion). Pour une base existante, utilise plutôt les fichiers migration-*.sql.
 
+
+
+
+
+
+
 create table if not exists bullet_items (
   id          uuid primary key default gen_random_uuid(),
   parent_id   uuid references bullet_items(id) on delete cascade,
