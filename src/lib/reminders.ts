@@ -27,6 +27,7 @@ export interface Appt {
   title: string;
   sched_date: string;
   start_time: string;
+  location?: string | null;
 }
 
 export const REMINDER_BEFORE = 30; // minutes
@@ -45,13 +46,14 @@ export const hhmm = (t: string) => t.slice(0, 5);
 
 export function apptBody(a: Appt, now: { minutes: number }): string {
   const diff = timeToMinutes(a.start_time) - now.minutes;
-  if (diff <= 0) return `${hhmm(a.start_time)} · c'est maintenant`;
-  return `${hhmm(a.start_time)} · dans ${diff} min`;
+  const where = a.location ? ` · 📍 ${a.location}` : '';
+  if (diff <= 0) return `${hhmm(a.start_time)} · c'est maintenant${where}`;
+  return `${hhmm(a.start_time)} · dans ${diff} min${where}`;
 }
 
 /** Résumé du matin : null s'il n'y a rien à dire */
 export function buildDigest(input: {
-  appts: { title: string; start_time: string | null }[];
+  appts: { title: string; start_time: string | null; location?: string | null }[];
   taskCount: number;
   birthdaysToday: string[];
   birthdaysTomorrow: string[];
@@ -62,7 +64,7 @@ export function buildDigest(input: {
   if (appts.length) {
     const sorted = [...appts].sort((a, b) => (a.start_time ?? '99').localeCompare(b.start_time ?? '99'));
     lines.push(
-      'RDV : ' + sorted.map((a) => (a.start_time ? `${hhmm(a.start_time)} ${a.title}` : a.title)).join(' · ')
+      'RDV : ' + sorted.map((a) => ((a.start_time ? `${hhmm(a.start_time)} ${a.title}` : a.title) + (a.location ? ` (${a.location})` : ''))).join(' · ')
     );
   }
   if (taskCount > 0) lines.push(`${taskCount} tâche${taskCount > 1 ? 's' : ''} aujourd'hui`);
