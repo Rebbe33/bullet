@@ -26,6 +26,7 @@ export function Nav() {
               🎂<span className="nav-long"> Anniversaires</span>
             </>
           )}
+          {link('/revue', <span title="Revue de la semaine">📋<span className="nav-long"> Revue</span></span>)}
           {link('/reglages', <span title="Réglages">⚙</span>)}
         </nav>
       </div>
