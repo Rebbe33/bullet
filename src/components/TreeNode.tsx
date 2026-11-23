@@ -202,6 +202,7 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
           <input type="checkbox" checked={done} onChange={onToggle} />
           <div className="node-main">
             <span className="node-title">
+              {item.sticker && <span className="sticker">{item.sticker}</span>}
               <Highlight text={item.title} query={ui.query} />
               {recurring && (
                 <span className="repeat-badge" title={repeatLabel(item.repeat_unit, item.repeat_every)}>
