@@ -18,6 +18,8 @@ export interface Item {
   priority: number;
   sched_type: SchedType | null;
   sched_date: string | null;
+  /** priorité de sa période : pour un élément planifié sur une semaine ou un mois */
+  sched_priority: boolean;
   /** rendez-vous : affiché dans une autre couleur, avec une heure optionnelle */
   is_appointment: boolean;
   /** "HH:MM:SS" (Postgres) ou "HH:MM" ; seulement pour les éléments planifiés sur un jour */
