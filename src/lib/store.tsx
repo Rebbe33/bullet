@@ -27,14 +27,14 @@ interface Store {
     parentId: string | null,
     title: string,
     sched?: Sched | null,
-    extra?: { is_appointment?: boolean; start_time?: string | null }
+    extra?: { is_appointment?: boolean; start_time?: string | null; sched_priority?: boolean }
   ) => Promise<void>;
   importRows: (parentId: string | null, rows: ParsedRow[]) => Promise<number>;
   updateItem: (id: string, patch: Partial<Item>) => Promise<void>;
   toggleDone: (id: string) => Promise<void>;
   restoreDone: (snapshot: { id: string; done: boolean }[]) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
-  schedule: (id: string, sched: Sched | null) => Promise<void>;
+  schedule: (id: string, sched: Sched | null, priority?: boolean) => Promise<void>;
   move: (id: string, parentId: string | null, position: number) => Promise<void>;
   addBirthdays: (list: NewBirthday[]) => Promise<number>;
   updateBirthday: (id: string, patch: Partial<NewBirthday>) => Promise<void>;
@@ -90,6 +90,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     void reload();
   }, [reload]);
 
+  // Appli installée = souvent ouverte en arrière-plan : on recharge les données
+  // quand on y revient (ex. modifications faites depuis un autre appareil).
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void reload();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [reload]);
+
   // En cas d'échec d'une écriture : on affiche l'erreur et on resynchronise.
   const fail = useCallback(
     async (e: unknown) => {
@@ -118,6 +128,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           sched_date: sched?.date ?? null,
           is_appointment: extra?.is_appointment ?? false,
           start_time: extra?.start_time ?? null,
+          sched_priority: extra?.sched_priority ?? false,
         })
         .select()
         .single();
@@ -217,12 +228,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const schedule: Store['schedule'] = useCallback(
-    (id, sched) =>
+    (id, sched, priority) =>
       updateItem(id, {
         sched_type: sched?.type ?? null,
         sched_date: sched?.date ?? null,
         // une heure n'a de sens que pour un jour précis
         ...(sched?.type === 'day' ? {} : { start_time: null }),
+        // la priorité de période n'existe que pour une semaine ou un mois
+        ...(sched && sched.type !== 'day'
+          ? priority !== undefined
+            ? { sched_priority: priority }
+            : {}
+          : { sched_priority: false }),
       }),
     [updateItem]
   );
