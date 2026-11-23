@@ -40,7 +40,11 @@ interface BlockProps {
   placeholder: string;
   onAdd: (title: string) => void | Promise<void>;
   /** si fourni, affiche le bouton « ＋ RDV » */
-  onAddAppt?: (title: string, time: string | null) => void | Promise<void>;
+  onAddAppt?: (
+    title: string,
+    time: string | null,
+    extra: { end_time: string | null; location: string | null }
+  ) => void | Promise<void>;
   /** anniversaires du jour (affichés en rose, automatiquement) */
   bdays?: Bday[];
   today?: boolean;
@@ -184,8 +188,10 @@ export default function AgendaPage() {
   const add = (sched: Sched) => (t: string) => addItem(null, t, sched);
   const addPriority = (sched: Sched) => (t: string) =>
     addItem(null, t, sched, { sched_priority: true });
-  const addAppt = (date: string) => (t: string, time: string | null) =>
-    addItem(null, t, { type: 'day', date }, { is_appointment: true, start_time: time });
+  const addAppt =
+    (date: string) =>
+    (t: string, time: string | null, extra: { end_time: string | null; location: string | null }) =>
+      addItem(null, t, { type: 'day', date }, { is_appointment: true, start_time: time, ...extra });
   const bdaysOn = (date: string): Bday[] =>
     birthdaysOn(birthdays, date).map((b) => ({ id: b.id, name: b.name, age: ageOn(b, date) }));
 
