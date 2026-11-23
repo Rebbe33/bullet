@@ -25,6 +25,10 @@ export interface Item {
   is_appointment: boolean;
   /** "HH:MM:SS" (Postgres) ou "HH:MM" ; seulement pour les éléments planifiés sur un jour */
   start_time: string | null;
+  /** heure de fin du rendez-vous (facultative) */
+  end_time: string | null;
+  /** lieu du rendez-vous (facultatif) */
+  location: string | null;
   /** répétition : « tous les `repeat_every` jours / semaines / mois » (null = pas de répétition) */
   repeat_unit: RepeatUnit | null;
   repeat_every: number;
