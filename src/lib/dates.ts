@@ -41,6 +41,14 @@ export const addMonths = (iso: string, n: number) => {
   return toISO(new Date(d.getFullYear(), d.getMonth() + n, 1));
 };
 
+/** Même jour du mois, `n` mois plus tard (le 31 devient le 28/29/30 si le mois est plus court) */
+export const addMonthsKeepDay = (iso: string, n: number) => {
+  const d = parseISO(iso);
+  const target = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  return toISO(new Date(target.getFullYear(), target.getMonth(), Math.min(d.getDate(), last)));
+};
+
 /** Numéro de semaine ISO (1–53, semaines du lundi au dimanche) */
 export const isoWeek = (iso: string) => {
   const d = parseISO(iso);
