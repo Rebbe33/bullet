@@ -31,6 +31,7 @@ export function TaskRow({ item, compact }: { item: Item; compact?: boolean }) {
             </b>
           )}
           {item.is_appointment && !time && <b className="time">RDV</b>}
+          {item.sticker && <span className="sticker">{item.sticker}</span>}
           {item.title}
           {item.repeat_unit && (
             <span className="repeat-badge" title={repeatLabel(item.repeat_unit, item.repeat_every)}>
