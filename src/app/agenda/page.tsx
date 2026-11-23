@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Item, SchedType, Sched } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { isDone } from '@/lib/tree';
@@ -47,6 +47,7 @@ interface BlockProps {
   onTitleClick?: () => void;
 }
 
+/** Bloc d'un jour */
 function Block({
   title,
   hint,
@@ -91,10 +92,71 @@ function Block({
   );
 }
 
+interface PeriodProps {
+  title: string;
+  hint?: string;
+  kind: 'semaine' | 'mois';
+  items: Item[];
+  onAdd: (title: string) => void | Promise<void>;
+  onAddPriority: (title: string) => void | Promise<void>;
+  onTitleClick?: () => void;
+}
+
+/** Bloc d'une semaine ou d'un mois : une zone « Priorités » puis les autres tâches */
+function PeriodBlock({ title, hint, kind, items, onAdd, onAddPriority, onTitleClick }: PeriodProps) {
+  const prio = items.filter((i) => i.sched_priority);
+  const rest = items.filter((i) => !i.sched_priority);
+  const word = kind === 'semaine' ? 'de la semaine' : 'du mois';
+  return (
+    <section className="card">
+      <h3>
+        {onTitleClick ? (
+          <button className="linklike" onClick={onTitleClick}>
+            {title}
+          </button>
+        ) : (
+          title
+        )}
+        {hint && <small>{hint}</small>}
+      </h3>
+      <div className="prio-box">
+        <div className="prio-head">★ Priorités {word}</div>
+        <ul className="tasks">
+          {prio.map((it) => (
+            <TaskRow key={it.id} item={it} compact />
+          ))}
+        </ul>
+        <QuickAdd placeholder="+ priorité" onAdd={onAddPriority} />
+      </div>
+      <ul className="tasks">
+        {rest.map((it) => (
+          <TaskRow key={it.id} item={it} compact />
+        ))}
+      </ul>
+      <QuickAdd placeholder={`+ tâche ${word}`} onAdd={onAdd} />
+    </section>
+  );
+}
+
 export default function AgendaPage() {
   const { items, index, birthdays, loading, addItem, schedule } = useStore();
   const [mode, setMode] = useState<Mode>('jour');
   const [anchor, setAnchor] = useState(() => todayISO());
+
+  // Appli ouverte en arrière-plan : quand on revient un nouveau jour, on se replace sur aujourd'hui
+  const lastToday = useRef(todayISO());
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const t = todayISO();
+      if (t !== lastToday.current) {
+        lastToday.current = t;
+        setAnchor(t);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   if (loading) return <p className="muted">Chargement…</p>;
 
@@ -120,6 +182,8 @@ export default function AgendaPage() {
   const at = (type: SchedType, date: string) =>
     sortItems(items.filter((i) => i.sched_type === type && i.sched_date === date));
   const add = (sched: Sched) => (t: string) => addItem(null, t, sched);
+  const addPriority = (sched: Sched) => (t: string) =>
+    addItem(null, t, sched, { sched_priority: true });
   const addAppt = (date: string) => (t: string, time: string | null) =>
     addItem(null, t, { type: 'day', date }, { is_appointment: true, start_time: time });
   const bdaysOn = (date: string): Bday[] =>
@@ -140,7 +204,16 @@ export default function AgendaPage() {
     );
 
   const days = Array.from({ length: 7 }, (_, k) => addDays(weekStart, k));
-  const months = Array.from(new Set([firstOfMonth(weekStart), firstOfMonth(addDays(weekStart, 6))]));
+
+  // vue semaine : le mois « principal » (celui du jeudi) est toujours affiché,
+  // l'autre mois seulement s'il contient déjà quelque chose
+  const mainMonth = firstOfMonth(addDays(weekStart, 3));
+  const weekMonths = [
+    mainMonth,
+    ...Array.from(
+      new Set([firstOfMonth(weekStart), firstOfMonth(addDays(weekStart, 6))])
+    ).filter((m) => m !== mainMonth && at('month', m).length > 0),
+  ];
 
   // vue mois : lundis des semaines qui touchent le mois + éléments par jour / semaine
   const monthWeeks: string[] = [];
@@ -176,6 +249,8 @@ export default function AgendaPage() {
     setAnchor(monday);
     setMode('semaine');
   };
+
+  const weekSched: Sched = { type: 'week', date: weekStart };
 
   return (
     <>
@@ -304,37 +379,36 @@ export default function AgendaPage() {
               );
             })}
           </section>
-          <Block
-            title={`Tâches de ${monthLabel(monthStart)}`}
-            hint="à faire quand tu veux dans le mois"
+          <PeriodBlock
+            title={monthLabel(monthStart)}
+            kind="mois"
             items={at('month', monthStart)}
-            placeholder="+ tâche du mois"
             onAdd={add({ type: 'month', date: monthStart })}
+            onAddPriority={addPriority({ type: 'month', date: monthStart })}
           />
         </>
       )}
 
       {mode === 'semaine' && (
         <>
-          <Block
-            title="Cette semaine"
-            hint="à faire quand tu veux dans la semaine"
+          <PeriodBlock
+            title={`Semaine ${isoWeek(weekStart)}`}
+            hint={weekLabel(weekStart)}
+            kind="semaine"
             items={at('week', weekStart)}
-            placeholder="+ tâche de la semaine"
-            onAdd={add({ type: 'week', date: weekStart })}
+            onAdd={add(weekSched)}
+            onAddPriority={addPriority(weekSched)}
           />
-          {months.map((m) =>
-            at('month', m).length > 0 ? (
-              <Block
-                key={m}
-                title={monthLabel(m)}
-                hint="tâches du mois"
-                items={at('month', m)}
-                placeholder="+ tâche du mois"
-                onAdd={add({ type: 'month', date: m })}
-              />
-            ) : null
-          )}
+          {weekMonths.map((m) => (
+            <PeriodBlock
+              key={m}
+              title={monthLabel(m)}
+              kind="mois"
+              items={at('month', m)}
+              onAdd={add({ type: 'month', date: m })}
+              onAddPriority={addPriority({ type: 'month', date: m })}
+            />
+          ))}
           <div className="week-grid">
             {days.map((d) => (
               <Block
@@ -364,20 +438,21 @@ export default function AgendaPage() {
             onAdd={add({ type: 'day', date: anchor })}
             onAddAppt={addAppt(anchor)}
           />
-          <Block
+          <PeriodBlock
             title={`Semaine ${isoWeek(weekStart)}`}
             hint={weekLabel(weekStart)}
+            kind="semaine"
             items={at('week', weekStart)}
-            placeholder="+ tâche de la semaine"
-            onAdd={add({ type: 'week', date: weekStart })}
+            onAdd={add(weekSched)}
+            onAddPriority={addPriority(weekSched)}
             onTitleClick={() => openWeek(weekStart)}
           />
-          <Block
+          <PeriodBlock
             title={monthLabel(monthStart)}
-            hint="tâches du mois"
+            kind="mois"
             items={at('month', monthStart)}
-            placeholder="+ tâche du mois"
             onAdd={add({ type: 'month', date: monthStart })}
+            onAddPriority={addPriority({ type: 'month', date: monthStart })}
           />
         </>
       )}
