@@ -2,7 +2,7 @@
 
 import type { Item } from '@/lib/types';
 import { useStore } from '@/lib/store';
-import { isDone, pathTitles } from '@/lib/tree';
+import { colorOf, isDone, pathTitles } from '@/lib/tree';
 import { repeatLabel } from '@/lib/recurrence';
 import { ScheduleMenu } from './ScheduleMenu';
 
@@ -10,13 +10,17 @@ export function TaskRow({ item, compact }: { item: Item; compact?: boolean }) {
   const { index, toggleDone, updateItem } = useStore();
   const done = isDone(index, item);
   const path = pathTitles(index, item.id);
+  const color = item.is_appointment ? null : colorOf(index, item.id);
   const time = item.start_time ? item.start_time.slice(0, 5) : null;
   const end = time && item.end_time ? item.end_time.slice(0, 5) : null;
   // l'étoile « priorité de la période » n'a de sens que pour une semaine ou un mois
   const periodic = item.sched_type === 'week' || item.sched_type === 'month';
 
   return (
-    <li className={'task' + (done ? ' is-done' : '') + (item.is_appointment ? ' appt' : '')}>
+    <li
+      className={'task' + (done ? ' is-done' : '') + (item.is_appointment ? ' appt' : '') + (color ? ' colored' : '')}
+      style={color ? ({ '--oc': color } as React.CSSProperties) : undefined}
+    >
       <input type="checkbox" checked={done} onChange={() => void toggleDone(item.id)} />
       <div className="task-main">
         <span className="task-title">
