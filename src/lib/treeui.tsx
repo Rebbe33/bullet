@@ -4,11 +4,13 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react';
 import { useStore } from './store';
+import { buildFilter, type SearchFilter } from './search';
+import { descendantIds } from './tree';
 
 // État d'affichage de l'arbre (dépliés / terminés visibles) + bouton « Annuler ».
 // Volontairement non mémorisé : à chaque visite de la page, tout est replié.
@@ -25,22 +27,26 @@ interface TreeUI {
   setShowDone: (v: boolean) => void;
   /** à appeler quand on coche un élément qui va disparaître de la vue */
   notifyDone: (title: string, snapshot: Snapshot) => void;
+  /** recherche */
+  query: string;
+  setQuery: (q: string) => void;
+  filter: SearchFilter | null;
+  /** glisser-déposer (ordinateur) */
+  dragId: string | null;
+  setDragId: (id: string | null) => void;
+  /** vrai si `id` peut être déposé dans `target` (pas dans lui-même ni dans ses descendants) */
+  canDrop: (id: string, target: string | null) => boolean;
 }
 
 const Ctx = createContext<TreeUI | null>(null);
 
 export function TreeUIProvider({ children }: { children: ReactNode }) {
-  const { restoreDone } = useStore();
+  const { restoreDone, notify, items, index } = useStore();
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set());
   const [showDone, setShowDone] = useState(false);
-  const [toast, setToast] = useState<{ title: string; snapshot: Snapshot } | null>(null);
-
-  // le message d'annulation disparaît tout seul après 10 s
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 10000);
-    return () => clearTimeout(t);
-  }, [toast]);
+  const [query, setQuery] = useState('');
+  const [dragId, setDragId] = useState<string | null>(null);
+  const filter = useMemo(() => buildFilter(index, items, query), [index, items, query]);
 
   const toggle = useCallback((id: string) => {
     setOpenIds((prev) => {
@@ -58,8 +64,18 @@ export function TreeUIProvider({ children }: { children: ReactNode }) {
   const collapseAll = useCallback(() => setOpenIds(new Set()), []);
   const expandAll = useCallback((ids: string[]) => setOpenIds(new Set(ids)), []);
   const notifyDone = useCallback(
-    (title: string, snapshot: Snapshot) => setToast({ title, snapshot }),
-    []
+    (title: string, snapshot: Snapshot) =>
+      notify(`« ${title} » terminée`, () => void restoreDone(snapshot)),
+    [notify, restoreDone]
+  );
+
+  const canDrop = useCallback(
+    (id: string, target: string | null) => {
+      if (id === target) return false;
+      if (target === null) return true;
+      return !descendantIds(index, id).includes(target);
+    },
+    [index]
   );
 
   const value: TreeUI = {
@@ -71,25 +87,17 @@ export function TreeUIProvider({ children }: { children: ReactNode }) {
     showDone,
     setShowDone,
     notifyDone,
+    query,
+    setQuery,
+    filter,
+    dragId,
+    setDragId,
+    canDrop,
   };
 
   return (
     <Ctx.Provider value={value}>
       {children}
-      {toast && (
-        <div className="toast" role="status">
-          <span className="toast-text">« {toast.title} » terminée</span>
-          <button
-            className="primary"
-            onClick={() => {
-              void restoreDone(toast.snapshot);
-              setToast(null);
-            }}
-          >
-            Annuler
-          </button>
-        </div>
-      )}
     </Ctx.Provider>
   );
 }
