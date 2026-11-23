@@ -37,7 +37,13 @@ interface Store {
     parentId: string | null,
     title: string,
     sched?: Sched | null,
-    extra?: { is_appointment?: boolean; start_time?: string | null; sched_priority?: boolean }
+    extra?: {
+      is_appointment?: boolean;
+      start_time?: string | null;
+      end_time?: string | null;
+      location?: string | null;
+      sched_priority?: boolean;
+    }
   ) => Promise<void>;
   importRows: (parentId: string | null, rows: ParsedRow[]) => Promise<number>;
   updateItem: (id: string, patch: Partial<Item>) => Promise<void>;
@@ -204,6 +210,8 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
           sched_date: sched?.date ?? null,
           is_appointment: extra?.is_appointment ?? false,
           start_time: extra?.start_time ?? null,
+          end_time: extra?.end_time ?? null,
+          location: extra?.location ?? null,
           sched_priority: extra?.sched_priority ?? false,
         })
         .select()
@@ -329,7 +337,7 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
         // sans planification, plus de répétition
         ...(sched ? {} : { repeat_unit: null, repeat_every: 1 }),
         // une heure n'a de sens que pour un jour précis
-        ...(sched?.type === 'day' ? {} : { start_time: null }),
+        ...(sched?.type === 'day' ? {} : { start_time: null, end_time: null }),
         // la priorité de période n'existe que pour une semaine ou un mois
         ...(sched && sched.type !== 'day'
           ? priority !== undefined
