@@ -1,12 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { TrackProvider, useTrack } from '@/lib/track';
+import { TrackProvider, useTrack } from '@/src/lib/track';
 import { addDays, addMonths, dayLong, firstOfMonth, lastOfMonth, mondayOf, monthLabel, parseISO, todayISO } from '@/lib/dates';
-import { moodColor } from '@/lib/moods';
-import type { Habit } from '@/lib/types';
-import { MoodPicker } from '@/components/MoodPicker';
-import { HabitForm } from '@/components/HabitForm';
+import { moodColor } from '@/src/lib/moods';
+import type { Habit } from '@/src/lib/types';
+import { MoodPicker } from '@/src/components/MoodPicker';
+import { HabitForm } from '@/src/components/HabitForm';
 
 const dayNum = (iso: string) => Number(iso.slice(8, 10));
 const weekdayLetter = (iso: string) =>
