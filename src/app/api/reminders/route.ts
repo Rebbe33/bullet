@@ -67,7 +67,7 @@ export async function GET(req: Request) {
     // 1) rendez-vous du jour avec une heure
     const { data: appData } = await sb
       .from('bullet_items')
-      .select('id,title,sched_date,start_time')
+      .select('id,title,sched_date,start_time,location')
       .eq('user_id', uid)
       .eq('sched_type', 'day')
       .eq('sched_date', now.date)
@@ -84,14 +84,14 @@ export async function GET(req: Request) {
       const [{ data: dayItems }, { data: bd }] = await Promise.all([
         sb
           .from('bullet_items')
-          .select('id,title,start_time,is_appointment')
+          .select('id,title,start_time,location,is_appointment')
           .eq('user_id', uid)
           .eq('sched_type', 'day')
           .eq('sched_date', now.date)
           .eq('done', false),
         sb.from('bullet_birthdays').select('*').eq('user_id', uid),
       ]);
-      const day = (dayItems ?? []) as { title: string; start_time: string | null; is_appointment: boolean }[];
+      const day = (dayItems ?? []) as { title: string; start_time: string | null; location: string | null; is_appointment: boolean }[];
       const list = (bd ?? []) as Birthday[];
       const digest = buildDigest({
         appts: day.filter((d) => d.is_appointment || d.start_time),
