@@ -1349,3 +1349,44 @@ mark {
   font-size: 0.95rem;
   margin: 12px 0 4px;
 }
+
+/* ---------- Couleurs des objectifs ---------- */
+
+.node-row.colored,
+.task.colored {
+  border-left: 5px solid var(--oc);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.swatch-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+
+.swatch.on {
+  border-color: var(--text, #fff);
+  box-shadow: 0 0 0 2px var(--oc, currentColor);
+}
+
+.swatch.none {
+  background: transparent;
+  border-color: rgba(128, 128, 128, 0.5);
+  color: var(--muted);
+}
