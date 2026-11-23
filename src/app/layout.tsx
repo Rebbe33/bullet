@@ -1,7 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { StoreProvider } from '@/lib/store';
+import { AuthGate } from '@/components/AuthGate';
 import { Nav } from '@/components/Nav';
 import { RegisterSW } from '@/components/RegisterSW';
 
@@ -26,10 +26,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr">
       <body>
-        <StoreProvider>
+        <AuthGate>
           <Nav />
           <main className="wrap">{children}</main>
-        </StoreProvider>
+        </AuthGate>
         <RegisterSW />
       </body>
     </html>
