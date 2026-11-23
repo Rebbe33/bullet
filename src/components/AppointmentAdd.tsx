@@ -3,14 +3,20 @@
 import { useState } from 'react';
 
 interface Props {
-  onAdd: (title: string, time: string | null) => void | Promise<void>;
+  onAdd: (
+    title: string,
+    time: string | null,
+    extra: { end_time: string | null; location: string | null }
+  ) => void | Promise<void>;
 }
 
-/** Petit formulaire « ＋ RDV » : titre + heure (facultative) */
+/** Petit formulaire « ＋ RDV » : titre + heure de début / fin + lieu (facultatifs) */
 export function AppointmentAdd({ onAdd }: Props) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('');
+  const [end, setEnd] = useState('');
+  const [place, setPlace] = useState('');
 
   if (!open) {
     return (
@@ -24,6 +30,8 @@ export function AppointmentAdd({ onAdd }: Props) {
     setOpen(false);
     setTitle('');
     setTime('');
+    setEnd('');
+    setPlace('');
   };
 
   return (
@@ -33,7 +41,10 @@ export function AppointmentAdd({ onAdd }: Props) {
         e.preventDefault();
         const t = title.trim();
         if (!t) return;
-        void onAdd(t, time || null);
+        void onAdd(t, time || null, {
+          end_time: time && end ? end : null,
+          location: place.trim() || null,
+        });
         close();
       }}
     >
@@ -53,6 +64,23 @@ export function AppointmentAdd({ onAdd }: Props) {
         value={time}
         aria-label="Heure du rendez-vous"
         onChange={(e) => setTime(e.target.value)}
+      />
+      {time && (
+        <input
+          type="time"
+          className="appt-time"
+          value={end}
+          min={time}
+          aria-label="Heure de fin"
+          title="Heure de fin (facultative)"
+          onChange={(e) => setEnd(e.target.value)}
+        />
+      )}
+      <input
+        className="appt-place"
+        value={place}
+        placeholder="📍 Lieu (facultatif)"
+        onChange={(e) => setPlace(e.target.value)}
       />
       <button type="submit" className="validate" disabled={!title.trim()} aria-label="Valider">
         ✓
