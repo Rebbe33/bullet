@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { Item } from '@/lib/types';
 import { useStore } from '@/lib/store';
-import { descendantIds, isDone, progress } from '@/lib/tree';
+import { OBJECTIVE_COLORS, colorOf, descendantIds, isDone, progress } from '@/lib/tree';
 import { useTreeUI } from '@/lib/treeui';
 import { ScheduleMenu } from './ScheduleMenu';
 import { QuickAdd } from './QuickAdd';
@@ -36,6 +36,7 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
       : allKids.filter((k) => !isDone(index, k));
   const open = ui.isOpen(item.id) || (f?.forcedOpen.has(item.id) ?? false);
   const recurring = !!item.repeat_unit;
+  const color = colorOf(index, item.id);
 
   const prog = progress(index, item.id);
   const done = isDone(index, item);
@@ -160,8 +161,10 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
             (depth === 0 ? ' root' : '') +
             (done ? ' is-done' : '') +
             (item.is_appointment ? ' appt' : '') +
-            (over ? ' drop-over' : '')
+            (over ? ' drop-over' : '') +
+            (color ? ' colored' : '')
           }
+          style={color ? ({ '--oc': color } as React.CSSProperties) : undefined}
           onDragOver={(e) => {
             if (ui.dragId && ui.canDrop(ui.dragId, item.id)) {
               e.preventDefault();
@@ -251,6 +254,29 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
 
       {tools && !editing && (
         <div className="node-tools">
+          {!item.parent_id && (
+            <div className="swatches" role="group" aria-label="Couleur de l'objectif">
+              <span className="swatch-label">🎨 Couleur</span>
+              {OBJECTIVE_COLORS.map((c) => (
+                <button
+                  key={c.hex}
+                  className={'swatch' + (item.color === c.hex ? ' on' : '')}
+                  style={{ background: c.hex }}
+                  title={c.name}
+                  aria-label={c.name}
+                  onClick={() => void updateItem(item.id, { color: c.hex })}
+                />
+              ))}
+              <button
+                className="swatch none"
+                title="Sans couleur"
+                aria-label="Sans couleur"
+                onClick={() => void updateItem(item.id, { color: null })}
+              >
+                ∅
+              </button>
+            </div>
+          )}
           <button onClick={moveTop} disabled={i <= 0}>
             ⤒ Tout en haut
           </button>
