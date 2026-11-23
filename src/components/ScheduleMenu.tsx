@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Item, Sched } from '@/lib/types';
 import { useStore } from '@/lib/store';
+import { STICKERS } from '@/lib/moods';
 import { REPEAT_PRESETS, presetKey, repeatLabel } from '@/lib/recurrence';
 import { addDays, firstOfMonth, mondayOf, schedLabel, todayISO } from '@/lib/dates';
 
@@ -175,6 +176,19 @@ export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean 
                 ))}
               </select>
             </label>
+            <div className="stickers" role="group" aria-label="Sticker">
+              <span className="menu-hint">Sticker</span>
+              {STICKERS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className={'sticker-btn' + (item.sticker === s ? ' on' : '')}
+                  onClick={() => void updateItem(item.id, { sticker: item.sticker === s ? null : s })}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
             {!scheduled && <span className="menu-hint">Planifie d'abord pour pouvoir répéter</span>}
 
             {scheduled && (
