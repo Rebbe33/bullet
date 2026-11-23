@@ -32,6 +32,8 @@ export interface Item {
   /** répétition : « tous les `repeat_every` jours / semaines / mois » (null = pas de répétition) */
   repeat_unit: RepeatUnit | null;
   repeat_every: number;
+  /** couleur de l'objectif (sur l'objectif principal ; ses sous-tâches en héritent) */
+  color: string | null;
   user_id?: string | null;
   created_at: string;
 }
