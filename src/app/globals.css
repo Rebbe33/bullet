@@ -1971,3 +1971,138 @@ mark {
     --accent-soft: color-mix(in srgb, var(--accent) 26%, #2a2730);
   }
 }
+
+/* ---------- Éléments des autres applis (gîtes, plantes, chien) ---------- */
+
+.ext-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ext {
+  border-left: 3px solid var(--ext, var(--line));
+  background: color-mix(in srgb, var(--ext, var(--line)) 14%, var(--card));
+  border-radius: 8px;
+}
+
+.ext a,
+.ext > .ext-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 10px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ext-gite { --ext: #6fb7b0; }
+.ext-menage { --ext: #8fb7e0; }
+.ext-plantes { --ext: #86c08f; }
+.ext-chien { --ext: #e5b06a; }
+
+.ext-main {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ext-title {
+  font-weight: 600;
+}
+
+.ext-detail {
+  font-size: 0.82rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.ext-ok {
+  font-size: 0.75rem;
+  color: var(--ok);
+}
+
+.ext-late {
+  font-size: 0.75rem;
+  color: var(--warn);
+}
+
+.ext.is-done .ext-title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.ext-dots {
+  margin-left: 2px;
+  font-size: 0.7rem;
+}
+
+/* ---------- Lecture ---------- */
+
+.reading-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.stat b {
+  font-size: 1.5rem;
+  line-height: 1.1;
+  color: var(--accent);
+}
+
+.stat span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.goal-input {
+  max-width: 260px;
+}
+
+.goal-bar {
+  height: 8px;
+  margin: 6px 0;
+}
+
+.month-bars {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  height: 150px;
+}
+
+.mbar {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+}
+
+.mbar-fill {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 6px 6px 0 0;
+  background: var(--accent);
+  opacity: 0.8;
+}
+
+.mbar-val,
+.mbar-name {
+  font-size: 0.65rem;
+  color: var(--muted);
+}

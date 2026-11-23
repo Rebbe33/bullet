@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session, User } from '@supabase/supabase-js';
 import { getSupabase } from '@/lib/supabase';
 import { StoreProvider } from '@/lib/store';
+import { ExternalProvider } from '@/lib/external';
 
 interface Auth {
   user: User;
@@ -113,7 +114,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   return (
     <AuthCtx.Provider value={{ user: session.user, signOut }}>
-      <StoreProvider userId={session.user.id}>{children}</StoreProvider>
+      <StoreProvider userId={session.user.id}>
+        <ExternalProvider>{children}</ExternalProvider>
+      </StoreProvider>
     </AuthCtx.Provider>
   );
 }

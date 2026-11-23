@@ -8,6 +8,7 @@ import { MOODS, moodColor } from '@/lib/moods';
 import { MoodPicker } from '@/components/MoodPicker';
 import { QuickAdd } from '@/components/QuickAdd';
 import { TaskRow } from '@/components/TaskRow';
+import { ReadingTracker } from '@/components/ReadingTracker';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const daysIn = (year: number, month: number) => new Date(year, month, 0).getDate();
@@ -137,7 +138,7 @@ function FutureLog({ year }: { year: number }) {
 
 export default function AnneePage() {
   const [year, setYear] = useState(() => new Date().getFullYear());
-  const [tab, setTab] = useState<'pixels' | 'future'>('pixels');
+  const [tab, setTab] = useState<'pixels' | 'future' | 'lecture'>('pixels');
 
   return (
     <>
@@ -158,13 +159,18 @@ export default function AnneePage() {
         <button className={tab === 'future' ? 'primary' : ''} onClick={() => setTab('future')}>
           🗓 Future log
         </button>
+        <button className={tab === 'lecture' ? 'primary' : ''} onClick={() => setTab('lecture')}>
+          📖 Lecture
+        </button>
       </div>
       {tab === 'pixels' ? (
         <TrackProvider>
           <Pixels year={year} />
         </TrackProvider>
-      ) : (
+      ) : tab === 'future' ? (
         <FutureLog year={year} />
+      ) : (
+        <ReadingTracker year={year} />
       )}
     </>
   );

@@ -22,6 +22,8 @@ import { ageOn, birthdaysOn } from '@/lib/birthdays';
 import { QuickAdd } from '@/components/QuickAdd';
 import { AppointmentAdd } from '@/components/AppointmentAdd';
 import { TaskRow } from '@/components/TaskRow';
+import { ExtList } from '@/components/ExtList';
+import { useExternal, type ExtEntry } from '@/lib/external';
 
 type Mode = 'jour' | 'semaine' | 'mois';
 
@@ -47,6 +49,8 @@ interface BlockProps {
   ) => void | Promise<void>;
   /** anniversaires du jour (affichés en rose, automatiquement) */
   bdays?: Bday[];
+  /** éléments des autres applis (gîtes, plantes, chien), en lecture seule */
+  ext?: ExtEntry[];
   today?: boolean;
   onTitleClick?: () => void;
 }
@@ -60,6 +64,7 @@ function Block({
   onAdd,
   onAddAppt,
   bdays,
+  ext,
   today,
   onTitleClick,
 }: BlockProps) {
@@ -85,6 +90,7 @@ function Block({
           ))}
         </ul>
       )}
+      {ext && <ExtList entries={ext} />}
       <ul className="tasks">
         {items.map((it) => (
           <TaskRow key={it.id} item={it} compact />
@@ -144,6 +150,7 @@ function PeriodBlock({ title, hint, kind, items, onAdd, onAddPriority, onTitleCl
 
 export default function AgendaPage() {
   const { items, index, birthdays, loading, addItem, schedule } = useStore();
+  const external = useExternal();
   const [mode, setMode] = useState<Mode>('jour');
   const [anchor, setAnchor] = useState(() => todayISO());
 
@@ -340,6 +347,7 @@ export default function AgendaPage() {
                     const list = byDay.get(d) ?? [];
                     const open = sortItems(list.filter((i) => !isDone(index, i)));
                     const bds = bdaysOn(d);
+                    const exts = external.entriesOn(d);
                     const inMonth = d >= monthStart && d <= monthEnd;
                     return (
                       <button
@@ -352,6 +360,11 @@ export default function AgendaPage() {
                         <span className="num">
                           {Number(d.slice(8))}
                           {bds.length > 0 && <span className="cake">🎂</span>}
+                          {exts.length > 0 && (
+                            <span className="ext-dots" title={exts.map((e) => e.title).join(' · ')}>
+                              {[...new Set(exts.map((e) => e.icon))].join('')}
+                            </span>
+                          )}
                         </span>
                         {open.length > 0 && (
                           <span
@@ -422,6 +435,7 @@ export default function AgendaPage() {
                 title={dayShort(d)}
                 items={at('day', d)}
                 bdays={bdaysOn(d)}
+                ext={external.entriesOn(d)}
                 placeholder="+ ajouter"
                 today={d === today}
                 onAdd={add({ type: 'day', date: d })}
@@ -439,6 +453,7 @@ export default function AgendaPage() {
             title={anchor === today ? "Aujourd'hui" : 'Ce jour'}
             items={at('day', anchor)}
             bdays={bdaysOn(anchor)}
+            ext={external.entriesOn(anchor)}
             placeholder="+ tâche du jour"
             today={anchor === today}
             onAdd={add({ type: 'day', date: anchor })}
