@@ -4,7 +4,7 @@ import type { Item } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { isDone, pathTitles } from '@/lib/tree';
 import { repeatLabel } from '@/lib/recurrence';
-import { ScheduleMenu } from './ScheduleMenu';
+import { ScheduleMenu } from '@/components/ScheduleMenu';
 
 export function TaskRow({ item, compact }: { item: Item; compact?: boolean }) {
   const { index, toggleDone, updateItem } = useStore();
