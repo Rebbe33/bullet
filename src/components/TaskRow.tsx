@@ -11,6 +11,7 @@ export function TaskRow({ item, compact }: { item: Item; compact?: boolean }) {
   const done = isDone(index, item);
   const path = pathTitles(index, item.id);
   const time = item.start_time ? item.start_time.slice(0, 5) : null;
+  const end = time && item.end_time ? item.end_time.slice(0, 5) : null;
   // l'étoile « priorité de la période » n'a de sens que pour une semaine ou un mois
   const periodic = item.sched_type === 'week' || item.sched_type === 'month';
 
@@ -19,7 +20,12 @@ export function TaskRow({ item, compact }: { item: Item; compact?: boolean }) {
       <input type="checkbox" checked={done} onChange={() => void toggleDone(item.id)} />
       <div className="task-main">
         <span className="task-title">
-          {time && <b className="time">{time}</b>}
+          {time && (
+            <b className="time">
+              {time}
+              {end ? `–${end}` : ''}
+            </b>
+          )}
           {item.is_appointment && !time && <b className="time">RDV</b>}
           {item.title}
           {item.repeat_unit && (
@@ -28,6 +34,7 @@ export function TaskRow({ item, compact }: { item: Item; compact?: boolean }) {
             </span>
           )}
         </span>
+        {item.location && <span className="task-place">📍 {item.location}</span>}
         {path.length > 0 && <span className="task-path">{path.join(' › ')}</span>}
       </div>
       {periodic && (
