@@ -34,6 +34,8 @@ export interface Item {
   repeat_every: number;
   /** couleur de l'objectif (sur l'objectif principal ; ses sous-tâches en héritent) */
   color: string | null;
+  /** petit emoji décoratif (sticker) */
+  sticker: string | null;
   user_id?: string | null;
   created_at: string;
 }
@@ -48,3 +50,41 @@ export interface Birthday {
 }
 
 export type NewBirthday = Pick<Birthday, 'name' | 'month' | 'day' | 'birth_year'>;
+
+export interface Habit {
+  id: string;
+  name: string;
+  emoji: string | null;
+  color: string;
+  /** check = case à cocher · number = une valeur (heures de sommeil, verres d'eau…) */
+  kind: 'check' | 'number';
+  unit: string | null;
+  goal_per_week: number | null;
+  position: number;
+  archived: boolean;
+}
+
+export interface DayNote {
+  day: string;
+  /** 1 (très bien) … 5 (mauvais) */
+  mood: number | null;
+  gratitude: string | null;
+}
+
+export interface Collection {
+  id: string;
+  title: string;
+  emoji: string | null;
+  color: string;
+  kind: 'list' | 'dump';
+  position: number;
+}
+
+export interface CollectionItem {
+  id: string;
+  collection_id: string;
+  text: string;
+  note: string | null;
+  done: boolean;
+  position: number;
+}
