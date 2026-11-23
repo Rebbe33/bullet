@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Item, Sched } from '@/lib/types';
 import { useStore } from '@/lib/store';
+import { REPEAT_PRESETS, presetKey, repeatLabel } from '@/lib/recurrence';
 import { addDays, firstOfMonth, mondayOf, schedLabel, todayISO } from '@/lib/dates';
 
 export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean }) {
@@ -123,6 +124,31 @@ export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean 
             ) : (
               <span className="menu-hint">Choisis un jour pour ajouter une heure</span>
             )}
+
+            <label>
+              Répéter
+              <select
+                value={presetKey(item.repeat_unit, item.repeat_every)}
+                disabled={!scheduled}
+                onChange={(e) => {
+                  const p = REPEAT_PRESETS.find((x) => x.key === e.target.value);
+                  if (p) void updateItem(item.id, { repeat_unit: p.unit, repeat_every: p.every });
+                }}
+              >
+                {item.repeat_unit &&
+                  !REPEAT_PRESETS.some((x) => x.key === presetKey(item.repeat_unit, item.repeat_every)) && (
+                    <option value={presetKey(item.repeat_unit, item.repeat_every)}>
+                      {repeatLabel(item.repeat_unit, item.repeat_every)}
+                    </option>
+                  )}
+                {REPEAT_PRESETS.map((p) => (
+                  <option key={p.key} value={p.key}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!scheduled && <span className="menu-hint">Planifie d'abord pour pouvoir répéter</span>}
 
             {scheduled && (
               <button className="danger" onClick={() => choose(null)}>
