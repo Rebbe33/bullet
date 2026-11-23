@@ -1128,3 +1128,178 @@ textarea.mono {
   max-height: 70vh;
   overflow-y: auto;
 }
+
+/* ---------- Connexion ---------- */
+
+.login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.3));
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.login-card h1 {
+  margin: 0 0 4px;
+  font-size: 1.3rem;
+}
+
+.login-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+/* ---------- Recherche ---------- */
+
+.search {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+}
+
+.small {
+  font-size: 0.85rem;
+  margin: 2px 0 6px;
+}
+
+mark {
+  background: rgba(255, 210, 60, 0.55);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.repeat-badge {
+  margin-left: 6px;
+  font-size: 0.8em;
+}
+
+/* ---------- Déplacer ---------- */
+
+.backdrop.dim {
+  background: rgba(0, 0, 0, 0.4);
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+
+.move-dialog {
+  position: fixed;
+  z-index: 71;
+  left: 50%;
+  top: 8vh;
+  transform: translateX(-50%);
+  width: calc(100% - 24px);
+  max-width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.move-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.move-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.move-list button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.move-path {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* ---------- Glisser-déposer (ordinateur uniquement) ---------- */
+
+.drag-handle {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .drag-handle {
+    display: inline-block;
+    cursor: grab;
+    color: var(--muted);
+    padding: 0 4px;
+    user-select: none;
+  }
+}
+
+.node-row.drop-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+.root-drop {
+  border: 2px dashed var(--accent);
+  border-radius: 10px;
+  padding: 10px;
+  margin: 8px 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* ---------- Réglages ---------- */
+
+.card-block {
+  background: var(--card);
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.card-block h2 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
