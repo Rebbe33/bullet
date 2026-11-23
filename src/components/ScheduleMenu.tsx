@@ -20,11 +20,12 @@ export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean 
   const scheduled = item.sched_type && item.sched_date;
   const periodic = item.sched_type === 'week' || item.sched_type === 'month';
   const time = item.start_time ? item.start_time.slice(0, 5) : null;
+  const end = item.end_time ? item.end_time.slice(0, 5) : null;
   const base = scheduled ? schedLabel(item.sched_type!, item.sched_date!) : null;
   const label = compact
     ? '📅'
     : base
-      ? base + (item.sched_type === 'day' && time ? ` · ${time}` : '')
+      ? base + (item.sched_type === 'day' && time ? ` · ${time}${end ? `–${end}` : ''}` : '')
       : '📅 Planifier';
 
   return (
@@ -101,7 +102,7 @@ export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean 
                 onChange={(e) =>
                   void updateItem(item.id, {
                     is_appointment: e.target.checked,
-                    ...(e.target.checked ? {} : { start_time: null }),
+                    ...(e.target.checked ? {} : { start_time: null, end_time: null, location: null }),
                   })
                 }
               />
@@ -116,6 +117,7 @@ export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean 
                   onChange={(e) =>
                     void updateItem(item.id, {
                       start_time: e.target.value || null,
+                      ...(e.target.value ? {} : { end_time: null }),
                       ...(e.target.value ? { is_appointment: true } : {}),
                     })
                   }
@@ -123,6 +125,31 @@ export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean 
               </label>
             ) : (
               <span className="menu-hint">Choisis un jour pour ajouter une heure</span>
+            )}
+            {item.sched_type === 'day' && time && (
+              <label>
+                Heure de fin
+                <input
+                  type="time"
+                  value={end ?? ''}
+                  min={time}
+                  onChange={(e) => void updateItem(item.id, { end_time: e.target.value || null })}
+                />
+              </label>
+            )}
+            {item.is_appointment && (
+              <label>
+                📍 Lieu
+                <input
+                  type="text"
+                  defaultValue={item.location ?? ''}
+                  placeholder="Adresse, cabinet…"
+                  onBlur={(e) => {
+                    const v = e.target.value.trim() || null;
+                    if (v !== item.location) void updateItem(item.id, { location: v });
+                  }}
+                />
+              </label>
             )}
 
             <label>
