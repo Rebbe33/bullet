@@ -7,6 +7,9 @@ import { descendantIds, isDone, progress } from '@/lib/tree';
 import { useTreeUI } from '@/lib/treeui';
 import { ScheduleMenu } from './ScheduleMenu';
 import { QuickAdd } from './QuickAdd';
+import { MoveDialog } from './MoveDialog';
+import { Highlight } from './Highlight';
+import { repeatLabel } from '@/lib/recurrence';
 
 export function TreeNode({ item, depth }: { item: Item; depth: number }) {
   const { index, addItem, updateItem, toggleDone, deleteItem, move } = useStore();
@@ -14,13 +17,25 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
   const [tools, setTools] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const [over, setOver] = useState(false);
   const [title, setTitle] = useState(item.title);
   const [notes, setNotes] = useState(item.notes ?? '');
 
   const allKids = index.kids.get(item.id) ?? [];
   // les éléments entièrement terminés sont masqués (sauf si on choisit de les afficher)
-  const kids = ui.showDone ? allKids : allKids.filter((k) => !isDone(index, k));
-  const open = ui.isOpen(item.id);
+  // recherche en cours : on garde les résultats (et leurs ancêtres), terminés compris ;
+  // un élément trouvé montre tout ce qu'il contient
+  const f = ui.filter;
+  const kids = f
+    ? f.matched.has(item.id)
+      ? allKids
+      : allKids.filter((k) => f.visible.has(k.id))
+    : ui.showDone
+      ? allKids
+      : allKids.filter((k) => !isDone(index, k));
+  const open = ui.isOpen(item.id) || (f?.forcedOpen.has(item.id) ?? false);
+  const recurring = !!item.repeat_unit;
 
   const prog = progress(index, item.id);
   const done = isDone(index, item);
@@ -37,7 +52,9 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
 
   // Cocher : si l'élément va disparaître de la vue, on propose « Annuler »
   const onToggle = () => {
-    if (!ui.showDone && !done) {
+    // un élément répétitif ne disparaît pas : il passe à sa prochaine date (message géré par le store)
+    const rolls = recurring && allKids.length === 0 && !item.done;
+    if (!ui.showDone && !done && !rolls) {
       const ids = [item.id, ...descendantIds(index, item.id)];
       ui.notifyDone(
         item.title,
@@ -96,6 +113,19 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
     if (ok) void deleteItem(item.id);
   };
 
+  const draggable = !f && !editing;
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOver(false);
+    const id = ui.dragId;
+    ui.setDragId(null);
+    if (!id || !ui.canDrop(id, item.id)) return;
+    const pk = index.kids.get(item.id) ?? [];
+    ui.open(item.id);
+    void move(id, item.id, pk.length ? Math.max(...pk.map((k) => k.position)) + 1 : 1);
+  };
+
   return (
     <li className={'node' + (priority ? ' prio' : '')}>
       {editing ? (
@@ -129,9 +159,35 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
             'node-row' +
             (depth === 0 ? ' root' : '') +
             (done ? ' is-done' : '') +
-            (item.is_appointment ? ' appt' : '')
+            (item.is_appointment ? ' appt' : '') +
+            (over ? ' drop-over' : '')
           }
+          onDragOver={(e) => {
+            if (ui.dragId && ui.canDrop(ui.dragId, item.id)) {
+              e.preventDefault();
+              setOver(true);
+            }
+          }}
+          onDragLeave={() => setOver(false)}
+          onDrop={onDrop}
         >
+          {draggable && (
+            <span
+              className="drag-handle"
+              draggable
+              title="Glisser sur un autre objectif pour y déplacer cet élément"
+              onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', item.id);
+                const row = (e.currentTarget as HTMLElement).closest('.node-row');
+                if (row) e.dataTransfer.setDragImage(row, 10, 10);
+                ui.setDragId(item.id);
+              }}
+              onDragEnd={() => ui.setDragId(null)}
+            >
+              ⠿
+            </span>
+          )}
           <button
             className="chev"
             disabled={kids.length === 0}
@@ -142,8 +198,19 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
           </button>
           <input type="checkbox" checked={done} onChange={onToggle} />
           <div className="node-main">
-            <span className="node-title">{item.title}</span>
-            {item.notes && <span className="node-notes">{item.notes}</span>}
+            <span className="node-title">
+              <Highlight text={item.title} query={ui.query} />
+              {recurring && (
+                <span className="repeat-badge" title={repeatLabel(item.repeat_unit, item.repeat_every)}>
+                  🔁
+                </span>
+              )}
+            </span>
+            {item.notes && (
+              <span className="node-notes">
+                <Highlight text={item.notes} query={ui.query} />
+              </span>
+            )}
           </div>
           <div className="node-actions">
             {allKids.length > 0 && (
@@ -193,6 +260,14 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
           <button onClick={moveDown} disabled={i < 0 || i >= same.length - 1}>
             ↓ Descendre
           </button>
+          <button
+            onClick={() => {
+              setMoving(true);
+              setTools(false);
+            }}
+          >
+            ⇢ Déplacer vers…
+          </button>
           <button onClick={outdent} disabled={!item.parent_id}>
             ← Remonter d'un niveau
           </button>
@@ -214,6 +289,8 @@ export function TreeNode({ item, depth }: { item: Item; depth: number }) {
           </button>
         </div>
       )}
+
+      {moving && <MoveDialog item={item} onClose={() => setMoving(false)} />}
 
       {open && (kids.length > 0 || adding) && (
         <ul className="children">
