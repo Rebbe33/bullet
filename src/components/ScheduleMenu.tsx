@@ -11,12 +11,13 @@ export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean 
   const today = todayISO();
   const nextMonday = addDays(mondayOf(today), 7);
 
-  const choose = (s: Sched | null) => {
+  const choose = (s: Sched | null, priority?: boolean) => {
     setOpen(false);
-    void schedule(item.id, s);
+    void schedule(item.id, s, priority);
   };
 
   const scheduled = item.sched_type && item.sched_date;
+  const periodic = item.sched_type === 'week' || item.sched_type === 'month';
   const time = item.start_time ? item.start_time.slice(0, 5) : null;
   const base = scheduled ? schedLabel(item.sched_type!, item.sched_date!) : null;
   const label = compact
@@ -49,6 +50,12 @@ export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean 
             <button onClick={() => choose({ type: 'month', date: firstOfMonth(today) })}>
               Ce mois-ci
             </button>
+            <button onClick={() => choose({ type: 'week', date: mondayOf(today) }, true)}>
+              ★ Priorité de la semaine
+            </button>
+            <button onClick={() => choose({ type: 'month', date: firstOfMonth(today) }, true)}>
+              ★ Priorité du mois
+            </button>
             <label>
               Jour précis
               <input
@@ -76,6 +83,16 @@ export function ScheduleMenu({ item, compact }: { item: Item; compact?: boolean 
             </label>
 
             <div className="menu-sep" />
+            {periodic && (
+              <label className="row-check">
+                <input
+                  type="checkbox"
+                  checked={item.sched_priority}
+                  onChange={(e) => void updateItem(item.id, { sched_priority: e.target.checked })}
+                />
+                ★ Priorité {item.sched_type === 'week' ? 'de la semaine' : 'du mois'}
+              </label>
+            )}
             <label className="row-check">
               <input
                 type="checkbox"
