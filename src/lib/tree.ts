@@ -75,3 +75,21 @@ export function pathTitles(idx: Index, id: string): string[] {
   }
   return out;
 }
+
+/** Couleur d'un élément = celle de son objectif principal (la racine de son arbre) */
+export function colorOf(idx: Index, id: string): string | null {
+  let cur = idx.byId.get(id);
+  while (cur?.parent_id) cur = idx.byId.get(cur.parent_id);
+  return cur?.color ?? null;
+}
+
+export const OBJECTIVE_COLORS: { name: string; hex: string }[] = [
+  { name: 'Rouge', hex: '#d64545' },
+  { name: 'Orange', hex: '#e08a1e' },
+  { name: 'Jaune', hex: '#d4b020' },
+  { name: 'Vert', hex: '#4c9f5f' },
+  { name: 'Turquoise', hex: '#2a9d8f' },
+  { name: 'Violet', hex: '#8e5bd1' },
+  { name: 'Marron', hex: '#8b6a4f' },
+  { name: 'Gris', hex: '#7a828c' },
+];
