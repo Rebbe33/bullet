@@ -1,4 +1,5 @@
 export type SchedType = 'day' | 'week' | 'month';
+export type RepeatUnit = 'day' | 'week' | 'month';
 
 export interface Sched {
   type: SchedType;
@@ -24,6 +25,10 @@ export interface Item {
   is_appointment: boolean;
   /** "HH:MM:SS" (Postgres) ou "HH:MM" ; seulement pour les éléments planifiés sur un jour */
   start_time: string | null;
+  /** répétition : « tous les `repeat_every` jours / semaines / mois » (null = pas de répétition) */
+  repeat_unit: RepeatUnit | null;
+  repeat_every: number;
+  user_id?: string | null;
   created_at: string;
 }
 
