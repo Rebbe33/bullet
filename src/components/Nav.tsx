@@ -26,6 +26,7 @@ export function Nav() {
               🎂<span className="nav-long"> Anniversaires</span>
             </>
           )}
+          {link('/reglages', <span title="Réglages">⚙</span>)}
         </nav>
       </div>
       {error && <div className="error">⚠️ {error}</div>}
