@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { applyTheme, getTheme, type ThemeName } from '@/components/ThemeApplier';
 import { useAuth } from '@/components/AuthGate';
 import { getSupabase } from '@/lib/supabase';
 import { getSubscription, pushSupported, subscribePush, unsubscribePush } from '@/lib/push';
@@ -11,8 +12,10 @@ export default function ReglagesPage() {
   const [on, setOn] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [theme, setTheme] = useState<ThemeName>('pastel');
 
   useEffect(() => {
+    setTheme(getTheme());
     setSupported(pushSupported());
     void getSubscription().then((s) => setOn(!!s));
   }, []);
@@ -58,6 +61,30 @@ export default function ReglagesPage() {
       <div className="page-head">
         <h1>Réglages</h1>
       </div>
+
+      <section className="card-block">
+        <h2>Apparence</h2>
+        <div className="row-actions">
+          {(['pastel', 'classique'] as ThemeName[]).map((t) => (
+            <button
+              key={t}
+              className={theme === t ? 'primary' : ''}
+              onClick={() => {
+                try {
+                  localStorage.setItem('bullet_theme', t);
+                } catch {}
+                setTheme(t);
+                applyTheme(t);
+              }}
+            >
+              {t === 'pastel' ? '🌸 Pastel doux' : 'Classique'}
+            </button>
+          ))}
+        </div>
+        <p className="muted small">
+          Le thème pastel change de couleur chaque mois. Ce réglage est mémorisé sur cet appareil.
+        </p>
+      </section>
 
       <section className="card-block">
         <h2>Compte</h2>
