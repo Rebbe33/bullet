@@ -4,6 +4,8 @@ import * as webpush from 'web-push';
 import { addDays } from '@/lib/dates';
 import { birthdaysOn } from '@/lib/birthdays';
 import { apptBody, buildDigest, dueApptReminders, parisNow, type Appt } from '@/lib/reminders';
+import { clientA } from '@/lib/server-ext';
+import { loadGites, type GiteEntry } from '@/lib/gites-server';
 import type { Birthday } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -63,6 +65,19 @@ export async function GET(req: Request) {
   const byUser = new Map<string, Sub[]>();
   for (const s of subs) byUser.set(s.user_id, [...(byUser.get(s.user_id) ?? []), s]);
 
+  // projet A (gîtes) : chargé une seule fois, et seulement le soir
+  let tomorrowGites: GiteEntry[] | null = null;
+  const gitesDemain = async () => {
+    if (tomorrowGites) return tomorrowGites;
+    try {
+      const a = clientA();
+      tomorrowGites = a ? (await loadGites(a, now.date)).filter((g) => g.depart === tomorrow && !g.menageDone) : [];
+    } catch {
+      tomorrowGites = [];
+    }
+    return tomorrowGites;
+  };
+
   for (const [uid, userSubs] of byUser) {
     // 1) rendez-vous du jour avec une heure
     const { data: appData } = await sb
@@ -100,6 +115,22 @@ export async function GET(req: Request) {
         birthdaysTomorrow: birthdaysOn(list, tomorrow).map((b) => b.name),
       });
       if (digest) for (const s of userSubs) await push(s, { ...digest, tag: 'digest', url: '/agenda' });
+    }
+
+    // 3) la veille d'un ménage (entre 18h et 22h) : matériel à emporter
+    if (now.minutes >= 18 * 60 && now.minutes < 22 * 60) {
+      const gs = await gitesDemain();
+      if (gs.length > 0 && (await claim(`menage-eve:${uid}:${tomorrow}`))) {
+        const lines = gs.map((g) =>
+          g.enCours
+            ? `${g.gite} : ménage déjà commencé`
+            : g.materiel.length
+              ? `${g.gite} : 🧳 ${g.materiel.join(', ')}`
+              : `${g.gite} : pas de matériel particulier`
+        );
+        for (const s of userSubs)
+          await push(s, { title: '🧹 Ménage demain', body: lines.join('\n'), tag: 'menage-eve', url: '/agenda' });
+      }
     }
   }
 

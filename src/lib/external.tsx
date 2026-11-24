@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { getSupabase } from './supabase';
-import { daysBetween } from './ext-logic';
+import { addDaysISO, daysBetween } from './ext-logic';
 import { todayISO } from './dates';
 
 export interface ExtEntry {
@@ -27,6 +27,8 @@ interface GiteRes {
   personnes: number | null;
   notes: string | null;
   menageDone: boolean;
+  materiel?: string[];
+  enCours?: boolean;
 }
 interface Plantes {
   count: number;
@@ -119,6 +121,7 @@ export function ExternalProvider({ children }: { children: ReactNode }) {
           out.push({ key: `dep-${r.id}`, kind: 'gite', icon: '🏡', title: `Départ · ${r.gite}`, detail: [who], url: URLS.gite });
 
         // ménage : le jour du départ ; s'il n'est pas validé, il reste affiché jusqu'à 3 jours après
+        const emporter = !r.menageDone && !r.enCours && r.materiel?.length ? `🧳 À emporter : ${r.materiel.join(', ')}` : null;
         const late = daysBetween(r.depart, today);
         const showLate = iso === today && !r.menageDone && late > 0 && late <= 3;
         if (r.depart === iso || showLate) {
@@ -127,12 +130,27 @@ export function ExternalProvider({ children }: { children: ReactNode }) {
             kind: 'menage',
             icon: '🧹',
             title: `Ménage · ${r.gite}`,
-            detail: r.menageDone ? undefined : ['À valider dans l\'appli gîtes'],
+            detail: r.menageDone ? undefined : [emporter, 'À valider dans l\'appli gîtes'].filter((x): x is string => !!x),
             done: r.menageDone,
             late: showLate && r.depart !== iso ? `départ il y a ${late} j` : undefined,
             url: URLS.gite,
           });
         }
+      }
+
+      // la veille d'un ménage : rappel du matériel à préparer
+      for (const r of gites) {
+        if (r.menageDone || iso < today || addDaysISO(r.depart, -1) !== iso) continue;
+        out.push({
+          key: `eve-${r.id}`,
+          kind: 'menage',
+          icon: '🧳',
+          title: `Demain : ménage · ${r.gite}`,
+          detail: r.enCours
+            ? ['Ménage déjà commencé dans l\'appli gîtes']
+            : [r.materiel?.length ? `À emporter : ${r.materiel.join(', ')}` : 'Pas de matériel particulier'],
+          url: URLS.gite,
+        });
       }
 
       if (iso === today && plantes && plantes.count > 0) {

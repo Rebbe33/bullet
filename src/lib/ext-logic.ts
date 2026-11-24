@@ -50,6 +50,48 @@ export function menageDone(
   return (doneDates.get(r.gite_id ?? '') ?? []).some((d) => d >= r.date_depart && (!next || d <= next));
 }
 
+export interface PassageRow {
+  gite_id: string | null;
+  numero: number;
+  cloture: boolean | null;
+  date_passage: string;
+}
+
+export interface MaterielTask {
+  gite_id: string | null;
+  freq: number;
+  last_done_passage: number | null;
+  materiel: string | null;
+}
+
+/**
+ * Numéro du prochain ménage d'un gîte, comme dans l'appli gîtes :
+ * dernier numéro + 1, sauf si un passage est déjà ouvert (non clôturé) : c'est lui le ménage en cours.
+ */
+export function nextPassage(passages: PassageRow[], giteId: string | null): { next: number; open: boolean } {
+  const mine = passages.filter((p) => p.gite_id === giteId);
+  const max = mine.reduce((m, p) => Math.max(m, p.numero), 0);
+  const open = mine.some((p) => p.numero === max && max > 0 && !p.cloture);
+  return { next: open ? max : max + 1, open };
+}
+
+/** Matériel à emporter : celui des tâches dues au passage `next` (même règle que l'appli gîtes), sans doublons */
+export function materielAEmporter(tasks: MaterielTask[], giteId: string | null, next: number): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of tasks) {
+    if (t.gite_id !== giteId || !t.materiel?.trim()) continue;
+    if (next - (t.last_done_passage ?? 0) < t.freq) continue;
+    for (const m of t.materiel.split(',').map((x) => x.trim()).filter(Boolean)) {
+      const k = m.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(m);
+    }
+  }
+  return out;
+}
+
 export const isCancelled = (r: Pick<Reservation, 'statut'>) => /annul/i.test(r.statut ?? '');
 
 // ---------- Plantes (même règles que l'appli plantes) ----------
