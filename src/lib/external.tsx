@@ -170,7 +170,6 @@ export function ExternalProvider({ children }: { children: ReactNode }) {
           kind: 'plantes',
           icon: '🌱',
           title: `Plantes · ${plantes.count} soin${plantes.count > 1 ? 's' : ''} à faire`,
-          detail: plantes.groups.map((g) => `${g.emoji} ${g.label} : ${g.plants.join(', ')}`),
           url: URLS.plantes,
         });
       }
