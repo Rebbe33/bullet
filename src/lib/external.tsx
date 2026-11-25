@@ -7,7 +7,7 @@ import { todayISO } from './dates';
 
 export interface ExtEntry {
   key: string;
-  kind: 'gite' | 'menage' | 'plantes' | 'chien';
+  kind: 'gite' | 'menage' | 'plantes' | 'maison' | 'chien';
   icon: string;
   title: string;
   detail?: string[];
@@ -52,6 +52,7 @@ const Ctx = createContext<Ext>({ loaded: false, errors: [], entriesOn: () => [] 
 const URLS = {
   gite: process.env.NEXT_PUBLIC_URL_GITES,
   plantes: process.env.NEXT_PUBLIC_URL_PLANTES,
+  maison: process.env.NEXT_PUBLIC_URL_MENAGE,
   chien: process.env.NEXT_PUBLIC_URL_VANYA,
 };
 
@@ -59,6 +60,7 @@ const URLS = {
 export function ExternalProvider({ children }: { children: ReactNode }) {
   const [gites, setGites] = useState<GiteRes[]>([]);
   const [plantes, setPlantes] = useState<Plantes | null>(null);
+  const [maison, setMaison] = useState<{ total: number; restantes: number } | null>(null);
   const [dogs, setDogs] = useState<DogReminder[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -71,13 +73,14 @@ export function ExternalProvider({ children }: { children: ReactNode }) {
       const res = await fetch('/api/ext/agenda', {
         headers: { Authorization: `Bearer ${data.session?.access_token ?? ''}` },
       });
-      const j = (await res.json()) as { gites?: GiteRes[]; plantes?: Plantes | null; errors?: string[]; error?: string };
+      const j = (await res.json()) as { gites?: GiteRes[]; plantes?: Plantes | null; maison?: { total: number; restantes: number } | null; errors?: string[]; error?: string };
       if (!res.ok) {
         // 503 = pas encore configuré : on reste discret
         if (res.status !== 503) errs.push(j.error ?? 'liaison projet A');
       } else {
         setGites(j.gites ?? []);
         setPlantes(j.plantes ?? null);
+        setMaison(j.maison ?? null);
         errs.push(...(j.errors ?? []));
       }
     } catch {
@@ -174,6 +177,18 @@ export function ExternalProvider({ children }: { children: ReactNode }) {
         });
       }
 
+      if (iso === today && maison && maison.total > 0) {
+        const r = maison.restantes;
+        out.push({
+          key: 'maison',
+          kind: 'maison',
+          icon: '🏠',
+          title: r > 0 ? `Ménage maison · ${r} tâche${r > 1 ? 's' : ''} à faire` : 'Ménage maison',
+          done: r === 0,
+          url: URLS.maison,
+        });
+      }
+
       for (const d of dogs) {
         const overdue = d.date_prochain_rappel < today;
         if (d.date_prochain_rappel === iso || (iso === today && overdue)) {
@@ -189,7 +204,7 @@ export function ExternalProvider({ children }: { children: ReactNode }) {
       }
       return out;
     },
-    [gites, plantes, dogs]
+    [gites, plantes, maison, dogs]
   );
 
   const value = useMemo(() => ({ loaded, errors, entriesOn }), [loaded, errors, entriesOn]);

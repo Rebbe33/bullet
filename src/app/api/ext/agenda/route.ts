@@ -17,8 +17,9 @@ export async function GET(req: Request) {
     today: string;
     gites: unknown[];
     plantes: ReturnType<typeof plantsDue> | null;
+    maison: { total: number; restantes: number } | null;
     errors: string[];
-  } = { today, gites: [], plantes: null, errors: [] };
+  } = { today, gites: [], plantes: null, maison: null, errors: [] };
 
   // ----- Gîtes -----
   try {
@@ -39,6 +40,16 @@ export async function GET(req: Request) {
     out.plantes = plantsDue((tasks.data ?? []) as PlantTask[], names, today);
   } catch (e) {
     out.errors.push('plantes : ' + (e instanceof Error ? e.message : String(e)));
+  }
+
+  // ----- Ménage maison : tâches prévues aujourd'hui (comme l'écran « Aujourd'hui » de l'appli) -----
+  try {
+    const { data, error } = await a.from('menage_planning').select('id,date_faite').eq('date_prevue', today);
+    if (error) throw error;
+    const rows = (data ?? []) as { id: string; date_faite: string | null }[];
+    out.maison = { total: rows.length, restantes: rows.filter((r) => !r.date_faite).length };
+  } catch (e) {
+    out.errors.push('ménage : ' + (e instanceof Error ? e.message : String(e)));
   }
 
   return NextResponse.json(out);
