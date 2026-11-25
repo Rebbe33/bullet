@@ -26,6 +26,15 @@ export interface GiteEntry {
   materiel: string[];
   /** un ménage est déjà commencé dans l'appli gîtes */
   enCours: boolean;
+  /** réservation suivante du même gîte (pour savoir pour combien de personnes préparer) */
+  suivante: { arrivee: string; personnes: number | null; locataire: string } | null;
+}
+
+function suivante(r: Reservation, all: Reservation[]) {
+  const n = all
+    .filter((x) => x.gite_id === r.gite_id && x.id !== r.id && x.date_arrivee >= r.date_depart)
+    .sort((x, y) => x.date_arrivee.localeCompare(y.date_arrivee))[0];
+  return n ? { arrivee: n.date_arrivee, personnes: n.nb_personnes, locataire: n.nom_locataire } : null;
 }
 
 /** Lecture seule du projet A : réservations, ménages validés et matériel à emporter */
@@ -71,6 +80,7 @@ export async function loadGites(a: SupabaseClient, today: string): Promise<GiteE
     menageDone: menageDone(r, all, done),
     materiel: [],
     enCours: false,
+    suivante: suivante(r, all),
   }));
 
   // matériel : uniquement pour le prochain ménage non validé de chaque gîte

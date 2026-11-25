@@ -29,6 +29,7 @@ interface GiteRes {
   menageDone: boolean;
   materiel?: string[];
   enCours?: boolean;
+  suivante?: { arrivee: string; personnes: number | null; locataire: string } | null;
 }
 interface Plantes {
   count: number;
@@ -122,6 +123,9 @@ export function ExternalProvider({ children }: { children: ReactNode }) {
 
         // ménage : le jour du départ ; s'il n'est pas validé, il reste affiché jusqu'à 3 jours après
         const emporter = !r.menageDone && !r.enCours && r.materiel?.length ? `🧳 À emporter : ${r.materiel.join(', ')}` : null;
+        const prochaine = r.suivante
+          ? `👥 Prochaine arrivée : ${r.suivante.personnes ? `${r.suivante.personnes} pers.` : 'nb de personnes non renseigné'} (le ${r.suivante.arrivee.slice(8, 10)}/${r.suivante.arrivee.slice(5, 7)})`
+          : 'Pas de réservation ensuite';
         const late = daysBetween(r.depart, today);
         const showLate = iso === today && !r.menageDone && late > 0 && late <= 3;
         if (r.depart === iso || showLate) {
@@ -130,7 +134,7 @@ export function ExternalProvider({ children }: { children: ReactNode }) {
             kind: 'menage',
             icon: '🧹',
             title: `Ménage · ${r.gite}`,
-            detail: r.menageDone ? undefined : [emporter, 'À valider dans l\'appli gîtes'].filter((x): x is string => !!x),
+            detail: r.menageDone ? undefined : [emporter, prochaine, 'À valider dans l\'appli gîtes'].filter((x): x is string => !!x),
             done: r.menageDone,
             late: showLate && r.depart !== iso ? `départ il y a ${late} j` : undefined,
             url: URLS.gite,
@@ -146,9 +150,16 @@ export function ExternalProvider({ children }: { children: ReactNode }) {
           kind: 'menage',
           icon: '🧳',
           title: `Demain : ménage · ${r.gite}`,
-          detail: r.enCours
-            ? ['Ménage déjà commencé dans l\'appli gîtes']
-            : [r.materiel?.length ? `À emporter : ${r.materiel.join(', ')}` : 'Pas de matériel particulier'],
+          detail: [
+            r.suivante
+              ? `👥 Prépare pour ${r.suivante.personnes ? `${r.suivante.personnes} pers.` : '? pers.'} (arrivée le ${r.suivante.arrivee.slice(8, 10)}/${r.suivante.arrivee.slice(5, 7)})`
+              : 'Pas de réservation ensuite',
+            r.enCours
+              ? 'Ménage déjà commencé dans l\'appli gîtes'
+              : r.materiel?.length
+                ? `🧳 À emporter : ${r.materiel.join(', ')}`
+                : 'Pas de matériel particulier',
+          ],
           url: URLS.gite,
         });
       }

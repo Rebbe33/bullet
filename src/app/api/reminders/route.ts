@@ -121,13 +121,11 @@ export async function GET(req: Request) {
     if (now.minutes >= 18 * 60 && now.minutes < 22 * 60) {
       const gs = await gitesDemain();
       if (gs.length > 0 && (await claim(`menage-eve:${uid}:${tomorrow}`))) {
-        const lines = gs.map((g) =>
-          g.enCours
-            ? `${g.gite} : ménage déjà commencé`
-            : g.materiel.length
-              ? `${g.gite} : 🧳 ${g.materiel.join(', ')}`
-              : `${g.gite} : pas de matériel particulier`
-        );
+        const lines = gs.map((g) => {
+          const pers = g.suivante ? ` · 👥 ${g.suivante.personnes ?? '?'} pers. ensuite` : '';
+          const mat = g.enCours ? 'ménage déjà commencé' : g.materiel.length ? `🧳 ${g.materiel.join(', ')}` : 'pas de matériel particulier';
+          return `${g.gite} : ${mat}${pers}`;
+        });
         for (const s of userSubs)
           await push(s, { title: '🧹 Ménage demain', body: lines.join('\n'), tag: 'menage-eve', url: '/agenda' });
       }
